@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tierlist Pribadi</title>
+<style>
+  :root { --bg:#16181d; --panel:#21242b; --text:#e8e8ea; --muted:#8b90a0; --size:88px; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:24px; background:var(--bg); color:var(--text);
+         font-family: system-ui, sans-serif; }
+  h1 { font-size:20px; margin:0 0 16px; }
+  .tier { display:flex; margin-bottom:6px; background:var(--panel); min-height:calc(var(--size) + 12px); }
+  .label { width:110px; flex:none; display:flex; flex-direction:column; align-items:center;
+           justify-content:center; gap:6px; padding:6px; color:#111; font-weight:700; text-align:center; }
+  .label .name { width:100%; outline:none; word-break:break-word; }
+  .label input[type=color] { width:28px; height:20px; padding:0; border:0; background:none; cursor:pointer; }
+  .zone { flex:1; display:flex; flex-wrap:wrap; gap:6px; padding:6px; align-content:flex-start; }
+  .zone.over { outline:2px dashed var(--muted); outline-offset:-4px; }
+  .pool { margin-top:20px; background:var(--panel); min-height:140px; }
+  .pool .zone:empty::before { content:"Tarik gambar dari komputermu ke sini (bisa banyak sekaligus)";
+                              color:var(--muted); padding:8px; }
+  .item { position:relative; width:var(--size); height:var(--size); cursor:grab; }
+  .item img { width:100%; height:100%; object-fit:cover; display:block; border-radius:4px; }
+  .item.dragging { opacity:.4; }
+  .del { position:absolute; top:2px; right:2px; width:22px; height:22px; border:0; border-radius:50%;
+         background:rgba(0,0,0,.75); color:#fff; cursor:pointer; display:none; line-height:1; }
+  .item:hover .del { display:block; }
+</style>
+</head>
+<body>
+  <h1>Tierlist Pribadi</h1>
+  <div id="tiers"></div>
+  <div class="pool"><div class="zone" id="pool" data-zone="pool"></div></div>
+
+<script>
+// ---------- Data ----------
+const state = {
+  tiers: [
+    { id: 't1', name: 'S', color: '#e5534b', items: [] },
+    { id: 't2', name: 'A', color: '#e8943a', items: [] },
+    { id: 't3', name: 'B', color: '#e5c94b', items: [] },
+    { id: 't4', name: 'C', color: '#6fbf5f', items: [] },
+    { id: 't5', name: 'D', color: '#4f9de0', items: [] },
+  ],
+  pool: [],      // daftar id gambar yang belum masuk tier
+  images: {},    // id -> { url }
+};
+let dragId = null; // id gambar yang sedang diseret (kalau drag dari dalam halaman)
+
+// ---------- Helper ----------
+function listOf(zone) {
+  return zone === 'pool' ? state.pool : state.tiers.find(t => t.id === zone).items;
+}
+function removeEverywhere(id) {
+  state.pool = state.pool.filter(x => x !== id);
+  state.tiers.forEach(t => { t.items = t.items.filter(x => x !== id); });
+}
+function moveTo(id, zone) {
+  removeEverywhere(id);
+  listOf(zone).push(id);
+}
+function addFiles(files, zone) {
+  for (const f of files) {
+    if (!f.type.startsWith('image/')) continue;
+    const id = crypto.randomUUID();
+    state.images[id] = { url: URL.createObjectURL(f) };
+    listOf(zone).push(id);
+  }
+}
+function deleteImage(id) {
+  removeEverywhere(id);
+  URL.revokeObjectURL(state.images[id].url);
+  delete state.images[id];
+}
+
+// ---------- Tampilan ----------
+function makeItem(id) {
+  const el = document.createElement('div');
+  el.className = 'item';
+  el.draggable = true;
+  el.innerHTML = `<img src="${state.images[id].url}" alt=""><button class="del" title="Hapus">×</button>`;
+  el.addEventListener('dragstart', e => {
+    dragId = id;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id); // Firefox butuh ini supaya drag jalan
+    setTimeout(() => el.classList.add('dragging'));
+  });
+  el.addEventListener('dragend', () => { dragId = null; render(); });
+  el.querySelector('.del').addEventListener('click', () => { deleteImage(id); render(); });
+  return el;
+}
+
+function wireZone(zoneEl, zoneId) {
+  zoneEl.addEventListener('dragover', e => { e.preventDefault(); zoneEl.classList.add('over'); });
+  zoneEl.addEventListener('dragleave', () => zoneEl.classList.remove('over'));
+  zoneEl.addEventListener('drop', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    zoneEl.classList.remove('over');
+    if (dragId) moveTo(dragId, zoneId);              // geser gambar antar tier
+    else addFiles(e.dataTransfer.files, zoneId);     // file baru dari komputer
+    dragId = null;
+    render();
+  });
+}
+
+function render() {
+  const tiersEl = document.getElementById('tiers');
+  tiersEl.innerHTML = '';
+  for (const tier of state.tiers) {
+    const row = document.createElement('div');
+    row.className = 'tier';
+    row.innerHTML = `
+      <div class="label" style="background:${tier.color}">
+        <div class="name" contenteditable="true" spellcheck="false"></div>
+        <input type="color" value="${tier.color}" title="Ganti warna">
+      </div>
+      <div class="zone"></div>`;
+    const nameEl = row.querySelector('.name');
+    nameEl.textContent = tier.name;
+    nameEl.addEventListener('input', () => { tier.name = nameEl.textContent; });
+    row.querySelector('input').addEventListener('input', e => {
+      tier.color = e.target.value;
+      row.querySelector('.label').style.background = tier.color;
+    });
+    const zone = row.querySelector('.zone');
+    tier.items.forEach(id => zone.appendChild(makeItem(id)));
+    wireZone(zone, tier.id);
+    tiersEl.appendChild(row);
+  }
+  const poolEl = document.getElementById('pool');
+  poolEl.innerHTML = '';
+  state.pool.forEach(id => poolEl.appendChild(makeItem(id)));
+}
+
+wireZone(document.getElementById('pool'), 'pool');
+
+// Cegah browser membuka file kalau tidak sengaja dijatuhkan di luar area
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => e.preventDefault());
+
+render();
+</script>
+</body>
+</html>
