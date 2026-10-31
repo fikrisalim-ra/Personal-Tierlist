@@ -12,6 +12,7 @@
       --text: #e8e8ea;
       --muted: #8b90a0;
       --size: 88px;
+      --fit: cover;
     }
 
     * {
@@ -38,7 +39,8 @@
       margin: 0;
     }
 
-    #status {
+    #status,
+    #usage {
       font-size: 13px;
       color: var(--muted);
     }
@@ -138,12 +140,14 @@
       width: var(--size);
       height: var(--size);
       cursor: grab;
+      background: rgba(0, 0, 0, .25);
+      border-radius: 4px;
     }
 
     .item img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: var(--fit);
       display: block;
       border-radius: 4px;
     }
@@ -210,7 +214,9 @@
   <header>
     <h1>Tierlist Pribadi</h1>
     <span id="status"></span>
+    <span id="usage"></span>
     <div class="actions">
+      <button id="btnFit" title="Cara gambar ditampilkan di kotak">Gambar: Potong</button>
       <button id="btnExport" title="Simpan semua (gambar + susunan) jadi satu file JSON">Export</button>
       <button id="btnImport" title="Ganti tierlist dengan isi file JSON">Import</button>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
@@ -235,6 +241,7 @@
       pool: [],      // id gambar yang belum masuk tier
       images: {},    // id -> { url }  (url sementara; file aslinya ada di IndexedDB)
     };
+    state.fit = 'cover';   // 'cover' = isi penuh (dipotong), 'contain' = utuh (ada ruang kosong)
     let dragId = null;
 
     // ---------- Penyimpanan (IndexedDB) ----------
@@ -265,6 +272,20 @@
     }
 
     const statusEl = document.getElementById('status');
+    const usageEl = document.getElementById('usage');
+
+    async function showUsage() {          // perkiraan ruang yang dipakai halaman ini di browser
+      try {
+        if (!navigator.storage || !navigator.storage.estimate) return;
+        const { usage } = await navigator.storage.estimate();
+        usageEl.textContent = `· ±${(usage / 1048576).toFixed(1)} MB terpakai`;
+      } catch (err) { /* tidak penting */ }
+    }
+
+    function applyFit() {
+      document.documentElement.style.setProperty('--fit', state.fit);
+      document.getElementById('btnFit').textContent = state.fit === 'cover' ? 'Gambar: Potong' : 'Gambar: Utuh';
+    }
     let saveTimer = null;
 
     function saveSoon() {                 // tunggu 0,3 detik supaya tidak menyimpan tiap ketikan
@@ -277,8 +298,9 @@
       clearTimeout(saveTimer);
       if (!db) return;
       try {
-        await run('meta', 'readwrite', s => s.put({ tiers: state.tiers, pool: state.pool }, 'state'));
+        await run('meta', 'readwrite', s => s.put({ tiers: state.tiers, pool: state.pool, fit: state.fit }, 'state'));
         statusEl.textContent = 'Tersimpan';
+        showUsage();
       } catch (err) {
         console.error(err);
         statusEl.textContent = 'Gagal menyimpan!';
@@ -307,14 +329,14 @@
         for (const r of rows) images.push({ id: r.id, type: r.blob.type, data: await blobToDataURL(r.blob) });
         const payload = {
           app: 'tierlist', version: 1, exportedAt: new Date().toISOString(),
-          tiers: state.tiers, pool: state.pool, images,
+          tiers: state.tiers, pool: state.pool, fit: state.fit, images,
         };
         const file = new Blob([JSON.stringify(payload)], { type: 'application/json' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(file);
         a.download = `tierlist-${new Date().toISOString().slice(0, 10)}.json`;
         a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        setTimeout(() => URL.revokeObjectURL(a.href), 60000);   // beri waktu browser menyelesaikan unduhan
         statusEl.textContent = 'Export selesai';
       } catch (err) {
         console.error(err);
@@ -356,6 +378,7 @@
         }));
         const pool = take(data.pool);
         blobs.forEach((_, id) => { if (!seen.has(id)) pool.push(id); });
+        const fit = data.fit === 'contain' ? 'contain' : 'cover';
 
         if (!confirm(`Import akan MENGGANTI tierlist yang ada sekarang dengan isi file ini (${blobs.size} gambar). Lanjut?`)) {
           statusEl.textContent = 'Import dibatalkan';
@@ -368,7 +391,7 @@
           const imgStore = t.objectStore('images');
           imgStore.clear();
           blobs.forEach((blob, id) => imgStore.put({ id, blob }));
-          t.objectStore('meta').put({ tiers, pool }, 'state');
+          t.objectStore('meta').put({ tiers, pool, fit }, 'state');
           t.oncomplete = resolve;
           t.onerror = () => reject(t.error);
           t.onabort = () => reject(t.error);
@@ -380,7 +403,10 @@
         blobs.forEach((blob, id) => { state.images[id] = { url: URL.createObjectURL(blob) }; });
         state.tiers = tiers;
         state.pool = pool;
+        state.fit = fit;
+        applyFit();
         render();
+        showUsage();
         statusEl.textContent = 'Import selesai';
       } catch (err) {
         console.error(err);
@@ -389,6 +415,11 @@
       }
     }
 
+    document.getElementById('btnFit').addEventListener('click', () => {
+      state.fit = state.fit === 'cover' ? 'contain' : 'cover';
+      applyFit();
+      saveSoon();
+    });
     document.getElementById('btnAddTier').addEventListener('click', addTier);
     document.getElementById('btnExport').addEventListener('click', exportJSON);
     document.getElementById('btnImport').addEventListener('click', () => document.getElementById('importFile').click());
@@ -410,25 +441,65 @@
       removeEverywhere(id);
       listOf(zone).push(id);
     }
+    // Ukuran terpanjang gambar setelah dikecilkan. Tampilan cuma 88 px, jadi 400 px sudah sangat tajam.
+    const MAX_SIDE = 400;
+    const KEEP_BYTES = 300 * 1024;   // gambar kecil yang sudah ringan tidak diutak-atik
+
+    // Deteksi gambar animasi (GIF, WebP animasi, APNG): ini TIDAK boleh dikecilkan lewat canvas,
+    // karena canvas hanya mengambil 1 frame dan animasinya hilang.
+    async function isAnimated(file) {
+      if (file.type === 'image/gif') return true;
+      const buf = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
+      const text = String.fromCharCode(...buf);
+      if (file.type === 'image/webp') return text.slice(8, 12) === 'WEBP' && text.slice(12, 16) === 'VP8X' && (buf[20] & 2) !== 0;
+      if (file.type === 'image/png') return text.includes('acTL');
+      return false;
+    }
+
+    async function shrinkImage(file) {
+      try {
+        if (file.type === 'image/svg+xml' || await isAnimated(file)) return file;   // dibiarkan apa adanya
+        const bmp = await createImageBitmap(file);
+        const longest = Math.max(bmp.width, bmp.height);
+        if (longest <= MAX_SIDE && file.size <= KEEP_BYTES) { bmp.close(); return file; }
+        const scale = Math.min(1, MAX_SIDE / longest);         // tidak pernah memperbesar
+        const w = Math.max(1, Math.round(bmp.width * scale));
+        const h = Math.max(1, Math.round(bmp.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);    // seluruh gambar, TIDAK dipotong
+        bmp.close();
+        const out = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.85));
+        return out && out.size < file.size ? out : file;       // kalau hasilnya tidak lebih kecil, pakai asli
+      } catch (err) {
+        console.error('Gagal mengecilkan, pakai file asli:', err);
+        return file;
+      }
+    }
+
     async function addFiles(files, zone, index) {
+      const list = [...files].filter(f => f.type.startsWith('image/'));
       const newIds = [];
-      for (const f of files) {
-        if (!f.type.startsWith('image/')) continue;
+      for (let i = 0; i < list.length; i++) {
+        statusEl.textContent = `Memproses gambar ${i + 1}/${list.length}…`;
+        const blob = await shrinkImage(list[i]);
         const id = crypto.randomUUID();
         try {
-          if (db) await run('images', 'readwrite', s => s.put({ id, blob: f }));
+          if (db) await run('images', 'readwrite', s => s.put({ id, blob }));
         } catch (err) {
           console.error(err);
           statusEl.textContent = 'Gagal menyimpan gambar (penyimpanan penuh?)';
           continue;
         }
-        state.images[id] = { url: URL.createObjectURL(f) };
+        state.images[id] = { url: URL.createObjectURL(blob) };
         newIds.push(id);
       }
-      const list = listOf(zone);
-      const at = (index == null || index > list.length) ? list.length : index;
-      list.splice(at, 0, ...newIds);
+      const target = listOf(zone);
+      const at = (index == null || index > target.length) ? target.length : index;
+      target.splice(at, 0, ...newIds);
     }
+
     const PALETTE = ['#e5534b', '#e8943a', '#e5c94b', '#6fbf5f', '#4f9de0', '#a07be0', '#e07bb4', '#7fc4c4'];
     function addTier() {
       state.tiers.push({
@@ -564,6 +635,7 @@
         if (meta) {
           state.tiers = meta.tiers;
           state.pool = meta.pool;
+          state.fit = meta.fit === 'contain' ? 'contain' : 'cover';
           // buang id yang filenya sudah tidak ada
           const known = id => id in state.images;
           state.pool = state.pool.filter(known);
@@ -581,7 +653,9 @@
         statusEl.textContent = 'Penyimpanan tidak tersedia, data tidak akan tersimpan';
       }
       wireZone(document.getElementById('pool'), 'pool');
+      applyFit();
       render();
+      showUsage();
     }
 
     window.addEventListener('dragover', e => e.preventDefault());
