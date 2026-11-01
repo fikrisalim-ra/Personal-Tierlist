@@ -1,0 +1,321 @@
+:root {
+    --bg: #16181d;
+    --panel: #21242b;
+    --text: #e8e8ea;
+    --muted: #8b90a0;
+    --size: 88px;
+    --fit: cover;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 24px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, sans-serif;
+}
+
+header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.lists {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.lists select {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid #3a3f4a;
+    border-radius: 6px;
+    padding: 5px 8px;
+    font: inherit;
+    font-size: 13px;
+    max-width: 200px;
+}
+
+h1 {
+    font-size: 20px;
+    margin: 0;
+}
+
+#status,
+#usage {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+}
+
+.actions button,
+.addrow button,
+.lists button {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid #3a3f4a;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.actions button:hover,
+.addrow button:hover,
+.lists button:hover {
+    border-color: var(--muted);
+}
+
+.addrow {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+}
+
+.tier {
+    display: flex;
+    margin-bottom: 6px;
+    background: var(--panel);
+    min-height: calc(var(--size) + 12px);
+}
+
+.label {
+    width: 110px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px;
+    color: #111;
+    font-weight: 700;
+    text-align: center;
+}
+
+.label .name {
+    width: 100%;
+    outline: none;
+    word-break: break-word;
+}
+
+.label input[type=color] {
+    width: 28px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+}
+
+.zone {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px;
+    align-content: flex-start;
+}
+
+.zone.over {
+    outline: 2px dashed var(--muted);
+    outline-offset: -4px;
+}
+
+.pool {
+    margin-top: 20px;
+    background: var(--panel);
+    min-height: 140px;
+    display: flex;
+}
+
+.pool .zone:empty::before {
+    content: "Tarik gambar dari komputermu ke sini (bisa banyak sekaligus)";
+    color: var(--muted);
+    padding: 8px;
+}
+
+.item {
+    position: relative;
+    width: var(--size);
+    height: var(--size);
+    cursor: grab;
+    background: rgba(0, 0, 0, .25);
+    border-radius: 4px;
+}
+
+.item img {
+    width: 100%;
+    height: 100%;
+    object-fit: var(--fit);
+    display: block;
+    border-radius: 4px;
+}
+
+.item.dragging {
+    opacity: .4;
+}
+
+.del {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 22px;
+    height: 22px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, .75);
+    color: #fff;
+    cursor: pointer;
+    display: none;
+    line-height: 1;
+}
+
+.item:hover .del {
+    display: block;
+}
+
+.label {
+    position: relative;
+}
+
+.tdel {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 20px;
+    height: 20px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, .35);
+    color: #fff;
+    cursor: pointer;
+    display: none;
+    line-height: 1;
+    font-size: 14px;
+}
+
+.tier:hover .tdel {
+    display: block;
+}
+
+.thandle {
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    cursor: grab;
+    font-size: 16px;
+    line-height: 1;
+    color: rgba(0, 0, 0, .55);
+    display: none;
+    user-select: none;
+}
+
+.tier:hover .thandle {
+    display: block;
+}
+
+.tier.moving {
+    opacity: .4;
+}
+
+.tmarker {
+    height: 4px;
+    background: #fff;
+    border-radius: 2px;
+    margin-bottom: 6px;
+    pointer-events: none;
+}
+
+.marker {
+    width: 4px;
+    height: var(--size);
+    background: #fff;
+    border-radius: 2px;
+    pointer-events: none;
+    flex: none;
+}
+
+.actions button:disabled {
+    opacity: .4;
+    cursor: default;
+}
+
+.tfold {
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    color: rgba(0, 0, 0, .6);
+    font-size: 14px;
+    line-height: 1;
+    display: none;
+}
+
+.tier:hover .tfold,
+.tier.collapsed .tfold {
+    display: block;
+}
+
+.count {
+    font-size: 12px;
+    font-weight: 600;
+    opacity: .7;
+    display: none;
+}
+
+.tier.collapsed {
+    min-height: 0;
+}
+
+.tier.collapsed .zone {
+    display: none;
+}
+
+.tier.collapsed .label {
+    width: auto;
+    flex: 1;
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 4px 36px 4px 24px;
+    gap: 12px;
+}
+
+.tier.collapsed .label .name {
+    width: auto;
+    min-width: 40px;
+}
+
+.tier.collapsed .count {
+    display: block;
+}
+
+/* tier terlipat: tombol buka = area lebar di tengah baris */
+.tier.collapsed .tfold {
+    position: static;
+    flex: 1;
+    align-self: stretch;
+    font-size: 16px;
+    background: rgba(0, 0, 0, .06);
+    border-radius: 4px;
+}
+
+.tier.collapsed .tfold:hover {
+    background: rgba(0, 0, 0, .16);
+}
