@@ -1,3 +1,13 @@
+// Versi file ini (untuk memastikan browser memuat file terbaru, bukan cache)
+const APP_VERSION = '3f-2';
+console.log('Tierlist app.js versi', APP_VERSION);
+function showFatal(msg) {
+    const el = document.getElementById('status');
+    if (el) { el.textContent = 'Error: ' + msg; el.style.color = '#ff7b72'; }
+}
+window.addEventListener('error', e => showFatal(`${e.message} (${(e.filename || '').split('/').pop()}:${e.lineno})`));
+window.addEventListener('unhandledrejection', e => showFatal(String((e.reason && e.reason.message) || e.reason)));
+
 // ---------- Data ----------
 const state = {
     tiers: [
@@ -17,6 +27,10 @@ let dragTierId = null;   // id tier yang sedang diseret (lewat pegangan ⠿)
 // ---------- Penyimpanan (IndexedDB) ----------
 // Dua "laci": 'images' = file gambar (blob), 'meta' = susunan tier & urutan gambar.
 let db = null;
+let initProblem = '';     // alasan database gagal dibuka (kalau gagal)
+function dbNotReady() {
+    alert('Penyimpanan belum siap' + (initProblem ? ': ' + initProblem : ' (masih memuat). Coba lagi sebentar.'));
+}
 let lists = [];          // daftar tierlist: [{ id, name }]
 let currentId = null;    // id tierlist yang sedang dibuka
 const curName = () => (lists.find(l => l.id === currentId) || {}).name || '';
@@ -87,7 +101,7 @@ function saveSoon() {                 // tunggu 0,3 detik supaya tidak menyimpan
 }
 async function saveNow() {
     clearTimeout(saveTimer);
-    if (!db) return;
+    if (!db || !currentId) return;
     try {
         await run('lists', 'readwrite', s => s.put({ id: currentId, name: curName(), tiers: state.tiers, pool: state.pool, fit: state.fit }));
         statusEl.textContent = 'Tersimpan';
@@ -111,7 +125,7 @@ function blobToDataURL(blob) {
 }
 
 async function exportJSON() {
-    if (!db) { alert('Penyimpanan tidak tersedia, tidak ada yang bisa di-export.'); return; }
+    if (!db) { dbNotReady(); return; }
     try {
         await saveNow();
         statusEl.textContent = 'Menyiapkan export…';
@@ -137,7 +151,7 @@ async function exportJSON() {
 }
 
 async function importJSON(file) {
-    if (!db) { alert('Penyimpanan tidak tersedia, import tidak bisa dilakukan.'); return; }
+    if (!db) { dbNotReady(); return; }
     try {
         const data = JSON.parse(await file.text());
         if (data.app !== 'tierlist' || data.version !== 1 || !Array.isArray(data.tiers)
@@ -339,6 +353,7 @@ async function shrinkImage(file) {
 }
 
 async function addFiles(files, zone, index) {
+    if (db && !currentId) { statusEl.textContent = 'Database masih memuat, coba lagi sebentar'; return; }
     const list = [...files].filter(f => f.type.startsWith('image/'));
     const newIds = [];
     for (let i = 0; i < list.length; i++) {
@@ -626,20 +641,21 @@ async function deleteCurrentList() {
 }
 document.getElementById('listSelect').addEventListener('change', e => switchList(e.target.value));
 document.getElementById('btnNewList').addEventListener('click', async () => {
-    if (!db) return;
+    if (!db) return dbNotReady();
     const name = prompt('Nama tierlist baru:', 'Tierlist ' + (lists.length + 1));
     if (name && name.trim()) await newList(name.trim().slice(0, 60));
 });
 document.getElementById('btnRenameList').addEventListener('click', () => {
     const cur = lists.find(l => l.id === currentId);
-    const name = db && prompt('Nama tierlist:', cur.name);
+    if (!db) return dbNotReady();
+    const name = prompt('Nama tierlist:', cur.name);
     if (!name || !name.trim()) return;
     cur.name = name.trim().slice(0, 60);
     renderListSelect();
     saveNow();
 });
 document.getElementById('btnDeleteList').addEventListener('click', async () => {
-    if (!db) return;
+    if (!db) return dbNotReady();
     if (lists.length < 2) { alert('Minimal harus ada satu tierlist.'); return; }
     if (confirm(`Hapus tierlist "${curName()}" beserta SEMUA gambarnya? Ini tidak bisa di-undo. Sebaiknya Export dulu.`)) await deleteCurrentList();
 });
@@ -647,7 +663,7 @@ document.getElementById('btnDeleteList').addEventListener('click', async () => {
 // ---------- Mulai ----------
 async function init() {
     try {
-        db = await openDB();
+        db = await Promise.race([openDB(), new Promise((_, no) => setTimeout(() => no(new Error('database tidak merespons dalam 8 detik (apakah tab lama masih terbuka?)')), 8000))]);
         lists = (await run('lists', 'readonly', s => s.getAll())).map(l => ({ id: l.id, name: l.name }));
         if (!lists.length) await createList('Tierlist 1');
         const saved = await run('meta', 'readonly', s => s.get('current'));
@@ -661,7 +677,8 @@ async function init() {
         lists = [{ id: 'tmp', name: 'Tidak tersimpan' }];
         currentId = 'tmp';
         renderListSelect();
-        statusEl.textContent = 'Penyimpanan tidak tersedia, data tidak akan tersimpan';
+        initProblem = (err && err.message) || String(err);
+        statusEl.textContent = 'Penyimpanan tidak tersedia: ' + initProblem;
     }
     wireZone(document.getElementById('pool'), 'pool');
     applyFit();
@@ -672,4 +689,6 @@ async function init() {
 window.addEventListener('dragover', e => e.preventDefault());
 window.addEventListener('drop', e => e.preventDefault());
 
+renderListSelect();
+render();
 init();
