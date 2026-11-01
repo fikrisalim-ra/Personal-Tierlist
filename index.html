@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tierlist Pribadi</title>
+  <title>Personal Tierlist</title>
   <style>
     :root {
       --bg: #16181d;
@@ -130,7 +130,7 @@
     }
 
     .pool .zone:empty::before {
-      content: "Tarik gambar dari komputermu ke sini (bisa banyak sekaligus)";
+      content: "Drag n drop gambar kesini, bisa multiple img jg";
       color: var(--muted);
       padding: 8px;
     }
@@ -199,6 +199,34 @@
       display: block;
     }
 
+    .thandle {
+      position: absolute;
+      top: 2px;
+      left: 4px;
+      cursor: grab;
+      font-size: 16px;
+      line-height: 1;
+      color: rgba(0, 0, 0, .55);
+      display: none;
+      user-select: none;
+    }
+
+    .tier:hover .thandle {
+      display: block;
+    }
+
+    .tier.moving {
+      opacity: .4;
+    }
+
+    .tmarker {
+      height: 4px;
+      background: #fff;
+      border-radius: 2px;
+      margin-bottom: 6px;
+      pointer-events: none;
+    }
+
     .marker {
       width: 4px;
       height: var(--size);
@@ -212,7 +240,7 @@
 
 <body>
   <header>
-    <h1>Tierlist Pribadi</h1>
+    <h1>Personal Tierlist</h1>
     <span id="status"></span>
     <span id="usage"></span>
     <div class="actions">
@@ -242,7 +270,8 @@
       images: {},    // id -> { url }  (url sementara; file aslinya ada di IndexedDB)
     };
     state.fit = 'cover';   // 'cover' = isi penuh (dipotong), 'contain' = utuh (ada ruang kosong)
-    let dragId = null;
+    let dragId = null;       // id gambar yang sedang diseret
+    let dragTierId = null;   // id tier yang sedang diseret (lewat pegangan ⠿)
 
     // ---------- Penyimpanan (IndexedDB) ----------
     // Dua "laci": 'images' = file gambar (blob), 'meta' = susunan tier & urutan gambar.
@@ -284,7 +313,7 @@
 
     function applyFit() {
       document.documentElement.style.setProperty('--fit', state.fit);
-      document.getElementById('btnFit').textContent = state.fit === 'cover' ? 'Gambar: Potong' : 'Gambar: Utuh';
+      document.getElementById('btnFit').textContent = state.fit === 'cover' ? 'Fit Media: Off' : 'Fit Media: On';
     }
     let saveTimer = null;
 
@@ -566,6 +595,7 @@
 
     function wireZone(zoneEl, zoneId) {
       zoneEl.addEventListener('dragover', e => {
+        if (dragTierId) return;        // yang diseret baris tier, bukan gambar
         e.preventDefault();
         zoneEl.classList.add('over');
         placeMarker(zoneEl, e.clientX, e.clientY);
@@ -574,6 +604,7 @@
         if (!zoneEl.contains(e.relatedTarget)) { zoneEl.classList.remove('over'); marker.remove(); }
       });
       zoneEl.addEventListener('drop', async e => {
+        if (dragTierId) return;        // biarkan naik ke penanganan urutan tier
         e.preventDefault();
         e.stopPropagation();
         zoneEl.classList.remove('over');
@@ -592,6 +623,38 @@
       });
     }
 
+    // Garis putih horizontal yang menunjukkan di mana baris tier akan jatuh
+    const tmarker = document.createElement('div');
+    tmarker.className = 'tmarker';
+    const tiersBox = document.getElementById('tiers');
+
+    tiersBox.addEventListener('dragover', e => {
+      if (!dragTierId) return;
+      e.preventDefault();
+      const rows = [...tiersBox.querySelectorAll(':scope > .tier:not(.moving)')];
+      const before = rows.find(r => {
+        const b = r.getBoundingClientRect();
+        return e.clientY < b.top + b.height / 2;     // kursor di atas tengah baris ini -> sisipkan sebelum baris ini
+      });
+      tiersBox.insertBefore(tmarker, before || null);
+    });
+    tiersBox.addEventListener('drop', e => {
+      if (!dragTierId) return;
+      e.preventDefault();
+      let index = 0;
+      for (const el of tiersBox.children) {
+        if (el === tmarker) break;
+        if (el.classList.contains('tier') && !el.classList.contains('moving')) index++;
+      }
+      tmarker.remove();
+      const from = state.tiers.findIndex(t => t.id === dragTierId);
+      const [moved] = state.tiers.splice(from, 1);
+      state.tiers.splice(index, 0, moved);
+      dragTierId = null;
+      render();
+      saveSoon();
+    });
+
     function render() {
       const tiersEl = document.getElementById('tiers');
       tiersEl.innerHTML = '';
@@ -603,6 +666,7 @@
         <div class="name" contenteditable="true" spellcheck="false"></div>
         <input type="color" value="${tier.color}" title="Ganti warna">
         <button class="tdel" title="Hapus tier (gambarnya kembali ke area gambar)">×</button>
+        <div class="thandle" draggable="true" title="Seret untuk memindahkan tier">⠿</div>
       </div>
       <div class="zone"></div>`;
         const nameEl = row.querySelector('.name');
@@ -610,6 +674,15 @@
         nameEl.addEventListener('input', () => { tier.name = nameEl.textContent; saveSoon(); });
         nameEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nameEl.blur(); } });
         row.querySelector('.tdel').addEventListener('click', () => deleteTier(tier.id));
+        const handle = row.querySelector('.thandle');
+        handle.addEventListener('dragstart', e => {
+          dragTierId = tier.id;
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', tier.id);
+          e.dataTransfer.setDragImage(row, 20, 20);     // yang tampak ikut terseret: satu baris penuh
+          setTimeout(() => row.classList.add('moving'));
+        });
+        handle.addEventListener('dragend', () => { dragTierId = null; tmarker.remove(); render(); });
         row.querySelector('input').addEventListener('input', e => {
           tier.color = e.target.value;
           row.querySelector('.label').style.background = tier.color;
