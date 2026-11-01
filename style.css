@@ -255,6 +255,98 @@ h1 {
     cursor: default;
 }
 
+.tgear {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, .3);
+    color: #fff;
+    cursor: pointer;
+    display: none;
+    font-size: 13px;
+    line-height: 1;
+}
+
+.tier:hover .tgear {
+    display: block;
+}
+
+#tpop {
+    position: fixed;
+    z-index: 50;
+    width: 216px;
+    padding: 10px;
+    display: none;
+    background: #262a33;
+    border: 1px solid #3a3f4a;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+}
+
+#tpop .sw {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+#tpop .sw button {
+    height: 26px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+#tpop .sw button.on {
+    border-color: #fff;
+}
+
+#tpop .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+#tpop input[type=color] {
+    width: 36px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid #3a3f4a;
+    border-radius: 4px;
+    background: none;
+    cursor: pointer;
+}
+
+#tpop .act {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+#tpop .act:hover {
+    background: rgba(255, 255, 255, .08);
+}
+
+#tpop .act.danger {
+    color: #ff7b72;
+}
+
 .tfold {
     position: absolute;
     bottom: 2px;

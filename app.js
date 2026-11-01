@@ -1,5 +1,5 @@
 // Versi file ini (untuk memastikan browser memuat file terbaru, bukan cache)
-const APP_VERSION = '3f-2';
+const APP_VERSION = '3g-1';
 console.log('Tierlist app.js versi', APP_VERSION);
 function showFatal(msg) {
     const el = document.getElementById('status');
@@ -221,7 +221,7 @@ document.getElementById('btnFit').addEventListener('click', () => {
     applyFit();
     saveSoon();
 });
-document.getElementById('btnAddTier').addEventListener('click', addTier);
+document.getElementById('btnAddTier').addEventListener('click', () => addTier());
 document.getElementById('btnUndo').addEventListener('click', undo);
 document.getElementById('btnRedo').addEventListener('click', redo);
 document.getElementById('btnFoldAll').addEventListener('click', () => setAllFolded(true));
@@ -375,10 +375,59 @@ async function addFiles(files, zone, index) {
     target.splice(at, 0, ...newIds);
 }
 
+// ---------- Menu pengaturan tier (⚙) ----------
+const SWATCHES = ['#e5534b', '#e8943a', '#e5c94b', '#6fbf5f', '#4f9de0', '#a07be0',
+    '#e07bb4', '#7fc4c4', '#8b90a0', '#c9ccd6', '#3b6fd4', '#2f9e8f'];
+const tpop = document.createElement('div');
+tpop.id = 'tpop';
+document.body.appendChild(tpop);
+
+function closeTierMenu() { tpop.style.display = 'none'; tpop.innerHTML = ''; }
+document.addEventListener('mousedown', e => { if (!tpop.contains(e.target) && !e.target.closest('.tgear')) closeTierMenu(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeTierMenu(); });
+window.addEventListener('scroll', closeTierMenu, true);
+
+function openTierMenu(tier, labelEl, anchor) {
+    const idx = state.tiers.indexOf(tier);
+    tpop.innerHTML = `<div class="sw"></div>
+    <div class="row"><span>Warna lain</span><input type="color"></div>
+    <button class="act" data-a="above">↑ Tambah baris di atas</button>
+    <button class="act" data-a="below">↓ Tambah baris di bawah</button>
+    <button class="act danger" data-a="del">Hapus tier</button>`;
+    const sw = tpop.querySelector('.sw');
+    SWATCHES.forEach(c => {
+        const b = document.createElement('button');
+        b.style.background = c;
+        b.title = c;
+        if (c.toLowerCase() === String(tier.color).toLowerCase()) b.className = 'on';
+        b.addEventListener('click', () => { closeTierMenu(); pushUndo(); tier.color = c; afterChange(); });
+        sw.appendChild(b);
+    });
+    const custom = tpop.querySelector('input');
+    custom.value = tier.color;
+    let picked = false;
+    custom.addEventListener('input', () => {        // geser pemilih warna = satu langkah undo
+        if (!picked) { pushUndo(); picked = true; }
+        tier.color = custom.value;
+        labelEl.style.background = tier.color;
+        saveSoon();
+    });
+    tpop.querySelectorAll('.act').forEach(b => b.addEventListener('click', () => {
+        closeTierMenu();
+        if (b.dataset.a === 'above') addTier(idx);
+        else if (b.dataset.a === 'below') addTier(idx + 1);
+        else deleteTier(tier.id);
+    }));
+    tpop.style.display = 'block';
+    const r = anchor.getBoundingClientRect(), w = tpop.offsetWidth, h = tpop.offsetHeight;
+    tpop.style.left = Math.max(8, Math.min(r.right - w, innerWidth - w - 8)) + 'px';   // rata kanan dengan tombol
+    tpop.style.top = Math.max(8, Math.min(r.bottom + 6, innerHeight - h - 8)) + 'px';
+}
+
 const PALETTE = ['#e5534b', '#e8943a', '#e5c94b', '#6fbf5f', '#4f9de0', '#a07be0', '#e07bb4', '#7fc4c4'];
-function addTier() {
+function addTier(at) {          // at = posisi sisip (kosong = paling bawah)
     pushUndo();
-    state.tiers.push({
+    state.tiers.splice(at == null ? state.tiers.length : at, 0, {
         id: 't' + crypto.randomUUID().slice(0, 8),
         name: 'Baru',
         color: PALETTE[state.tiers.length % PALETTE.length],
@@ -515,8 +564,7 @@ function render() {
       <div class="label" style="background:${tier.color}">
         <div class="name" contenteditable="true" spellcheck="false"></div>
         <span class="count"></span>
-        <input type="color" value="${tier.color}" title="Ganti warna">
-        <button class="tdel" title="Hapus tier (gambarnya kembali ke area gambar)">×</button>
+        <button class="tgear" title="Pengaturan tier">⚙</button>
         <button class="tfold" title="Lipat / buka tier">▾</button>
         <div class="thandle" draggable="true" title="Seret untuk memindahkan tier">⠿</div>
       </div>
@@ -531,7 +579,7 @@ function render() {
         });
         nameEl.addEventListener('blur', () => { nameEdited = false; });
         nameEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nameEl.blur(); } });
-        row.querySelector('.tdel').addEventListener('click', () => deleteTier(tier.id));
+        row.querySelector('.tgear').addEventListener('click', e => openTierMenu(tier, row.querySelector('.label'), e.currentTarget));
         const handle = row.querySelector('.thandle');
         handle.addEventListener('dragstart', e => {
             dragTierId = tier.id;
@@ -541,15 +589,6 @@ function render() {
             setTimeout(() => row.classList.add('moving'));
         });
         handle.addEventListener('dragend', () => { dragTierId = null; tmarker.remove(); render(); });
-        let colorEdited = false;
-        const colorEl = row.querySelector('input');
-        colorEl.addEventListener('change', () => { colorEdited = false; });
-        colorEl.addEventListener('input', e => {
-            if (!colorEdited) { pushUndo(); colorEdited = true; }
-            tier.color = e.target.value;
-            row.querySelector('.label').style.background = tier.color;
-            saveSoon();
-        });
         row.classList.toggle('collapsed', !!tier.collapsed);
         row.querySelector('.count').textContent = `${tier.items.length} gambar`;
         const fold = row.querySelector('.tfold');
