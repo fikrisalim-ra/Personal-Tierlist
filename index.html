@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Personal Tierlist</title>
+  <title>Tierlist Pribadi</title>
   <style>
     :root {
       --bg: #16181d;
@@ -70,6 +70,8 @@
 
     .addrow {
       margin-top: 8px;
+      display: flex;
+      gap: 8px;
     }
 
     .tier {
@@ -130,7 +132,7 @@
     }
 
     .pool .zone:empty::before {
-      content: "Drag n drop gambar kesini, bisa multiple img jg";
+      content: "Tarik gambar dari komputermu ke sini (bisa banyak sekaligus)";
       color: var(--muted);
       padding: 8px;
     }
@@ -235,15 +237,79 @@
       pointer-events: none;
       flex: none;
     }
+
+    .actions button:disabled {
+      opacity: .4;
+      cursor: default;
+    }
+
+    .tfold {
+      position: absolute;
+      bottom: 2px;
+      right: 4px;
+      border: 0;
+      background: none;
+      cursor: pointer;
+      color: rgba(0, 0, 0, .6);
+      font-size: 14px;
+      line-height: 1;
+      display: none;
+    }
+
+    .tier:hover .tfold,
+    .tier.collapsed .tfold {
+      display: block;
+    }
+
+    .count {
+      font-size: 12px;
+      font-weight: 600;
+      opacity: .7;
+      display: none;
+    }
+
+    .tier.collapsed {
+      min-height: 0;
+    }
+
+    .tier.collapsed .zone {
+      display: none;
+    }
+
+    .tier.collapsed .label {
+      width: auto;
+      flex: 1;
+      flex-direction: row;
+      justify-content: flex-start;
+      padding: 4px 36px 4px 24px;
+      gap: 12px;
+    }
+
+    .tier.collapsed .label .name {
+      width: auto;
+      min-width: 40px;
+    }
+
+    .tier.collapsed .count {
+      display: block;
+    }
+
+    .tier.collapsed .tfold {
+      bottom: auto;
+      top: 50%;
+      transform: translateY(-50%);
+    }
   </style>
 </head>
 
 <body>
   <header>
-    <h1>Personal Tierlist</h1>
+    <h1>Tierlist Pribadi</h1>
     <span id="status"></span>
     <span id="usage"></span>
     <div class="actions">
+      <button id="btnUndo" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
+      <button id="btnRedo" title="Redo (Ctrl+Y)" disabled>↷ Redo</button>
       <button id="btnFit" title="Cara gambar ditampilkan di kotak">Gambar: Potong</button>
       <button id="btnExport" title="Simpan semua (gambar + susunan) jadi satu file JSON">Export</button>
       <button id="btnImport" title="Ganti tierlist dengan isi file JSON">Import</button>
@@ -251,7 +317,8 @@
     </div>
   </header>
   <div id="tiers"></div>
-  <div class="addrow"><button id="btnAddTier">+ Tambah tier</button></div>
+  <div class="addrow"><button id="btnAddTier">+ Tambah tier</button><button id="btnFoldAll">Lipat semua</button><button
+      id="btnUnfoldAll">Buka semua</button></div>
   <div class="pool">
     <div class="zone" id="pool" data-zone="pool"></div>
   </div>
@@ -313,7 +380,7 @@
 
     function applyFit() {
       document.documentElement.style.setProperty('--fit', state.fit);
-      document.getElementById('btnFit').textContent = state.fit === 'cover' ? 'Fit Media: Off' : 'Fit Media: On';
+      document.getElementById('btnFit').textContent = state.fit === 'cover' ? 'Gambar: Potong' : 'Gambar: Utuh';
     }
     let saveTimer = null;
 
@@ -404,6 +471,7 @@
           name: String(t.name ?? ''),
           color: okColor(t.color) ? t.color : '#888888',
           items: take(t.items),
+          collapsed: !!t.collapsed,
         }));
         const pool = take(data.pool);
         blobs.forEach((_, id) => { if (!seen.has(id)) pool.push(id); });
@@ -429,7 +497,11 @@
         // 4) Baru ganti tampilan
         Object.values(state.images).forEach(i => URL.revokeObjectURL(i.url));
         state.images = {};
-        blobs.forEach((blob, id) => { state.images[id] = { url: URL.createObjectURL(blob) }; });
+        undoStack.length = 0; redoStack.length = 0;      // import = mulai baru, riwayat undo dibuang
+        Object.values(trash).forEach(i => URL.revokeObjectURL(i.url));
+        Object.keys(trash).forEach(id => delete trash[id]);
+        updateUndoButtons();
+        blobs.forEach((blob, id) => { state.images[id] = { url: URL.createObjectURL(blob), blob }; });
         state.tiers = tiers;
         state.pool = pool;
         state.fit = fit;
@@ -450,6 +522,17 @@
       saveSoon();
     });
     document.getElementById('btnAddTier').addEventListener('click', addTier);
+    document.getElementById('btnUndo').addEventListener('click', undo);
+    document.getElementById('btnRedo').addEventListener('click', redo);
+    document.getElementById('btnFoldAll').addEventListener('click', () => setAllFolded(true));
+    document.getElementById('btnUnfoldAll').addEventListener('click', () => setAllFolded(false));
+    document.addEventListener('keydown', e => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (document.activeElement && document.activeElement.isContentEditable) return;   // saat mengetik nama, pakai undo teks bawaan browser
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+      else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
+    });
     document.getElementById('btnExport').addEventListener('click', exportJSON);
     document.getElementById('btnImport').addEventListener('click', () => document.getElementById('importFile').click());
     document.getElementById('importFile').addEventListener('change', e => {
@@ -457,6 +540,68 @@
       e.target.value = '';   // supaya file yang sama bisa dipilih lagi
       if (f) importJSON(f);
     });
+
+    // ---------- Undo / Redo ----------
+    const MAX_UNDO = 50;
+    const undoStack = [], redoStack = [];
+    const trash = {};   // gambar yang "dihapus" tapi masih bisa dikembalikan lewat undo: id -> { url, blob }
+
+    const idsIn = snap => [...snap.pool, ...snap.tiers.flatMap(t => t.items)];
+    const takeSnapshot = () => ({ tiers: structuredClone(state.tiers), pool: [...state.pool] });
+
+    function pushUndo() {            // panggil SEBELUM mengubah data
+      undoStack.push(takeSnapshot());
+      if (undoStack.length > MAX_UNDO) undoStack.shift();
+      redoStack.length = 0;
+      updateUndoButtons();
+    }
+    function updateUndoButtons() {
+      document.getElementById('btnUndo').disabled = undoStack.length === 0;
+      document.getElementById('btnRedo').disabled = redoStack.length === 0;
+    }
+    function sweepUnreferenced() {   // gambar yang tidak dipakai tier/pool -> tong sampah (dihapus dari database, blob tetap di memori)
+      const used = new Set(idsIn(state));
+      for (const id of Object.keys(state.images)) {
+        if (used.has(id)) continue;
+        trash[id] = state.images[id];
+        delete state.images[id];
+        if (db) run('images', 'readwrite', s => s.delete(id)).catch(console.error);
+      }
+    }
+    function pruneTrash() {          // buang dari tong sampah gambar yang sudah tidak mungkin dikembalikan
+      const keep = new Set();
+      [...undoStack, ...redoStack].forEach(sn => idsIn(sn).forEach(id => keep.add(id)));
+      for (const id of Object.keys(trash)) {
+        if (keep.has(id)) continue;
+        URL.revokeObjectURL(trash[id].url);
+        delete trash[id];
+      }
+    }
+    function afterChange() {         // rapikan + gambar ulang + simpan
+      sweepUnreferenced();
+      pruneTrash();
+      render();
+      saveSoon();
+      updateUndoButtons();
+    }
+    function restore(snap) {
+      const folded = new Map(state.tiers.map(t => [t.id, t.collapsed]));   // status lipat bukan bagian dari undo
+      state.tiers = structuredClone(snap.tiers);
+      state.tiers.forEach(t => { if (folded.has(t.id)) t.collapsed = folded.get(t.id); });
+      state.pool = [...snap.pool];
+      for (const id of idsIn(snap)) {            // kembalikan gambar yang tadinya dihapus
+        if (state.images[id] || !trash[id]) continue;
+        state.images[id] = trash[id];
+        delete trash[id];
+        if (db) run('images', 'readwrite', s => s.put({ id, blob: state.images[id].blob })).catch(console.error);
+      }
+      const known = id => id in state.images;
+      state.pool = state.pool.filter(known);
+      state.tiers.forEach(t => { t.items = t.items.filter(known); });
+      afterChange();
+    }
+    function undo() { if (!undoStack.length) return; redoStack.push(takeSnapshot()); restore(undoStack.pop()); }
+    function redo() { if (!redoStack.length) return; undoStack.push(takeSnapshot()); restore(redoStack.pop()); }
 
     // ---------- Helper ----------
     function listOf(zone) {
@@ -521,7 +666,7 @@
           statusEl.textContent = 'Gagal menyimpan gambar (penyimpanan penuh?)';
           continue;
         }
-        state.images[id] = { url: URL.createObjectURL(blob) };
+        state.images[id] = { url: URL.createObjectURL(blob), blob };
         newIds.push(id);
       }
       const target = listOf(zone);
@@ -531,27 +676,31 @@
 
     const PALETTE = ['#e5534b', '#e8943a', '#e5c94b', '#6fbf5f', '#4f9de0', '#a07be0', '#e07bb4', '#7fc4c4'];
     function addTier() {
+      pushUndo();
       state.tiers.push({
         id: 't' + crypto.randomUUID().slice(0, 8),
         name: 'Baru',
         color: PALETTE[state.tiers.length % PALETTE.length],
         items: [],
       });
-      render();
-      saveSoon();
+      afterChange();
     }
     function deleteTier(id) {
+      pushUndo();
       const tier = state.tiers.find(t => t.id === id);
       state.pool.push(...tier.items);          // gambarnya tidak dihapus, kembali ke area gambar
       state.tiers = state.tiers.filter(t => t.id !== id);
+      afterChange();
+    }
+    function deleteImage(id) {                 // gambar masuk tong sampah, bisa dikembalikan dengan undo
+      pushUndo();
+      removeEverywhere(id);
+      afterChange();
+    }
+    function setAllFolded(value) {
+      state.tiers.forEach(t => { t.collapsed = value; });
       render();
       saveSoon();
-    }
-    function deleteImage(id) {
-      removeEverywhere(id);
-      URL.revokeObjectURL(state.images[id].url);
-      delete state.images[id];
-      if (db) run('images', 'readwrite', s => s.delete(id)).catch(console.error);
     }
 
     // ---------- Tampilan ----------
@@ -567,7 +716,7 @@
         setTimeout(() => el.classList.add('dragging'));
       });
       el.addEventListener('dragend', () => { dragId = null; render(); });
-      el.querySelector('.del').addEventListener('click', () => { deleteImage(id); render(); saveSoon(); });
+      el.querySelector('.del').addEventListener('click', () => deleteImage(id));
       return el;
     }
 
@@ -610,6 +759,7 @@
         zoneEl.classList.remove('over');
         const index = markerIndex(zoneEl);
         marker.remove();
+        pushUndo();
         if (dragId) {
           removeEverywhere(dragId);
           listOf(zoneId).splice(index, 0, dragId);          // geser gambar ke posisi yang ditunjuk
@@ -618,8 +768,7 @@
           await addFiles(e.dataTransfer.files, zoneId, index);  // file baru dari komputer
         }
         dragId = null;
-        render();
-        saveSoon();
+        afterChange();
       });
     }
 
@@ -647,12 +796,12 @@
         if (el.classList.contains('tier') && !el.classList.contains('moving')) index++;
       }
       tmarker.remove();
+      pushUndo();
       const from = state.tiers.findIndex(t => t.id === dragTierId);
       const [moved] = state.tiers.splice(from, 1);
       state.tiers.splice(index, 0, moved);
       dragTierId = null;
-      render();
-      saveSoon();
+      afterChange();
     });
 
     function render() {
@@ -664,14 +813,22 @@
         row.innerHTML = `
       <div class="label" style="background:${tier.color}">
         <div class="name" contenteditable="true" spellcheck="false"></div>
+        <span class="count"></span>
         <input type="color" value="${tier.color}" title="Ganti warna">
         <button class="tdel" title="Hapus tier (gambarnya kembali ke area gambar)">×</button>
+        <button class="tfold" title="Lipat / buka tier">▾</button>
         <div class="thandle" draggable="true" title="Seret untuk memindahkan tier">⠿</div>
       </div>
       <div class="zone"></div>`;
         const nameEl = row.querySelector('.name');
         nameEl.textContent = tier.name;
-        nameEl.addEventListener('input', () => { tier.name = nameEl.textContent; saveSoon(); });
+        let nameEdited = false;       // satu sesi mengetik = satu langkah undo
+        nameEl.addEventListener('input', () => {
+          if (!nameEdited) { pushUndo(); nameEdited = true; }
+          tier.name = nameEl.textContent;
+          saveSoon();
+        });
+        nameEl.addEventListener('blur', () => { nameEdited = false; });
         nameEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nameEl.blur(); } });
         row.querySelector('.tdel').addEventListener('click', () => deleteTier(tier.id));
         const handle = row.querySelector('.thandle');
@@ -683,13 +840,22 @@
           setTimeout(() => row.classList.add('moving'));
         });
         handle.addEventListener('dragend', () => { dragTierId = null; tmarker.remove(); render(); });
-        row.querySelector('input').addEventListener('input', e => {
+        let colorEdited = false;
+        const colorEl = row.querySelector('input');
+        colorEl.addEventListener('change', () => { colorEdited = false; });
+        colorEl.addEventListener('input', e => {
+          if (!colorEdited) { pushUndo(); colorEdited = true; }
           tier.color = e.target.value;
           row.querySelector('.label').style.background = tier.color;
           saveSoon();
         });
+        row.classList.toggle('collapsed', !!tier.collapsed);
+        row.querySelector('.count').textContent = `${tier.items.length} gambar`;
+        const fold = row.querySelector('.tfold');
+        fold.textContent = tier.collapsed ? '▸' : '▾';
+        fold.addEventListener('click', () => { tier.collapsed = !tier.collapsed; render(); saveSoon(); });
         const zone = row.querySelector('.zone');
-        tier.items.forEach(id => zone.appendChild(makeItem(id)));
+        if (!tier.collapsed) tier.items.forEach(id => zone.appendChild(makeItem(id)));   // tier terlipat tidak perlu digambar
         wireZone(zone, tier.id);
         tiersEl.appendChild(row);
       }
@@ -704,7 +870,7 @@
         db = await openDB();
         const imgs = await run('images', 'readonly', s => s.getAll());
         const meta = await run('meta', 'readonly', s => s.get('state'));
-        for (const i of imgs) state.images[i.id] = { url: URL.createObjectURL(i.blob) };
+        for (const i of imgs) state.images[i.id] = { url: URL.createObjectURL(i.blob), blob: i.blob };
         if (meta) {
           state.tiers = meta.tiers;
           state.pool = meta.pool;
