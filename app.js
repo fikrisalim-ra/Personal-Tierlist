@@ -63,7 +63,7 @@ const askText = (title, message, value) => modal({ title, message, input: value,
 const fileSafe = n => (n || '').replace(/[\\\/:*?"<>|\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'tierlist';
 
 // Versi file ini (untuk memastikan browser memuat file terbaru, bukan cache)
-const APP_VERSION = '4f-1';
+const APP_VERSION = '4g-1';
 console.log('Tierlist app.js versi', APP_VERSION);
 function showFatal(msg) {
     const el = document.getElementById('status');
@@ -84,6 +84,8 @@ const state = {
     pool: [],      // id gambar yang belum masuk tier
     images: {},    // id -> { url }  (url sementara; file aslinya ada di IndexedDB)
 };
+state.exportedAt = 0;   // waktu export terakhir (ms)
+state.updatedAt = 0;    // waktu perubahan terakhir (ms)
 state.desc = '';        // deskripsi tierlist (teks bebas, opsional)
 state.props = {};      // properti teks per gambar: id -> [{ t: judul, v: isi }]
 state.fit = 'cover';   // 'cover' = isi penuh (dipotong), 'contain' = utuh (ada ruang kosong)
@@ -158,9 +160,11 @@ function applyFit() {
     document.getElementById('btnFit').textContent = state.fit === 'cover' ? 'Gambar: Potong' : 'Gambar: Utuh';
 }
 let saveTimer = null;
+let dirty = false;     // ada perubahan yang belum disimpan?
 
 function saveSoon() {                 // tunggu 0,3 detik supaya tidak menyimpan tiap ketikan
     if (!db) return;
+    dirty = true;
     statusEl.textContent = 'Menyimpan…';
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveNow, 300);
@@ -168,10 +172,12 @@ function saveSoon() {                 // tunggu 0,3 detik supaya tidak menyimpan
 async function saveNow() {
     clearTimeout(saveTimer);
     if (!db || !currentId) return;
+    if (dirty) { state.updatedAt = Date.now(); dirty = false; }    // pindah tierlist saja tidak dihitung sebagai perubahan
     try {
-        await run('lists', 'readwrite', s => s.put({ id: currentId, name: curName(), tiers: state.tiers, pool: state.pool, fit: state.fit, props: liveProps(), desc: state.desc }));
+        await run('lists', 'readwrite', s => s.put({ id: currentId, name: curName(), tiers: state.tiers, pool: state.pool, fit: state.fit, props: liveProps(), desc: state.desc, exportedAt: state.exportedAt, updatedAt: state.updatedAt }));
         statusEl.textContent = 'Tersimpan';
         showUsage();
+        renderBackupInfo();
     } catch (err) {
         console.error(err);
         statusEl.textContent = 'Gagal menyimpan!';
@@ -208,6 +214,9 @@ async function exportJSON() {
         a.download = `${fileSafe(curName())}.json`;      // nama file = nama tierlist
         a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 60000);   // beri waktu browser menyelesaikan unduhan
+        state.exportedAt = Date.now();
+        await saveNow();
+        renderBackupInfo();
         statusEl.textContent = 'Export selesai';
     } catch (err) {
         console.error(err);
@@ -258,6 +267,7 @@ async function importJSON(file) {
         const remap = ids => ids.map(x => idMap.get(x));
         tiers.forEach(t => { t.items = remap(t.items); });
         const newPool = remap(pool);
+        const ts = Date.now();
         const newProps = {};      // properti ikut dipindah ke id gambar yang baru
         Object.entries(data.props || {}).forEach(([oldId, list]) => { if (idMap.has(oldId)) { const c = cleanProps(list); if (c.length) newProps[idMap.get(oldId)] = c; } });
         const name = String(data.name || file.name.replace(/\.json$/i, '') || 'Import').slice(0, 60);
@@ -269,7 +279,7 @@ async function importJSON(file) {
             const t = db.transaction(['images', 'lists'], 'readwrite');
             const imgStore = t.objectStore('images');
             blobs.forEach((blob, oldId) => imgStore.put({ id: idMap.get(oldId), blob, listId: id }));
-            t.objectStore('lists').put({ id, name, tiers, pool: newPool, fit, props: newProps, desc: String(data.desc || '').slice(0, 2000) });
+            t.objectStore('lists').put({ id, name, tiers, pool: newPool, fit, props: newProps, desc: String(data.desc || '').slice(0, 2000), exportedAt: ts, updatedAt: ts });
             t.oncomplete = resolve;
             t.onerror = () => reject(t.error);
             t.onabort = () => reject(t.error);
@@ -299,6 +309,7 @@ searchEl.addEventListener('keydown', e => {
 document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); searchEl.focus(); searchEl.select(); }
 });
+document.getElementById('backupInfo').addEventListener('click', exportJSON);
 document.getElementById('btnAddTier').addEventListener('click', () => addTier());
 document.getElementById('btnUndo').addEventListener('click', undo);
 document.getElementById('btnRedo').addEventListener('click', redo);
@@ -551,9 +562,9 @@ document.body.appendChild(tip);
 function hideTip() { tip.style.display = 'none'; }
 function moveTip(e) {
     const w = tip.offsetWidth, h = tip.offsetHeight;
-    let x = e.clientX + 16, y = e.clientY + 16;
-    if (x + w > innerWidth - 8) x = e.clientX - w - 16;
-    if (y + h > innerHeight - 8) y = e.clientY - h - 16;
+    let x = e.clientX + 16, y = e.clientY - h - 16;      // utama: kanan atas kursor, seperti kotak info item di game RPG
+    if (x + w > innerWidth - 8) x = e.clientX - w - 16;    // mentok kanan -> kiri atas
+    if (y < 8) y = e.clientY + 18;                         // mentok atas -> pindah ke bawah
     tip.style.left = Math.max(8, x) + 'px';
     tip.style.top = Math.max(8, y) + 'px';
 }
@@ -569,6 +580,51 @@ function showTipFor(list, e) {            // seperti kotak info item di game RPG
 const titleList = mk('datalist');
 titleList.id = 'ptitles';
 document.body.appendChild(titleList);
+
+// ---------- Panel detail gambar (gambar besar + properti) ----------
+function openDetail(id) {
+    hideTip();
+    const order = [...state.tiers.flatMap(t => t.items), ...state.pool];      // urutan seperti di layar
+    let i = Math.max(0, order.indexOf(id));
+    const back = mk('div', 'mback'), box = mk('div', 'modal detail');
+    const wrap = mk('div', 'dimg'), img = mk('img');
+    const prev = mk('button', 'dnav prev', '‹'), next = mk('button', 'dnav next', '›');
+    wrap.append(img, prev, next);
+    const side = mk('div', 'dside'), where = mk('div', 'dwhere'), body = mk('div', 'dprops'), foot = mk('div', 'mbtns');
+    const edit = mk('button', '', 'Ubah properti'), closeB = mk('button', 'primary', 'Tutup');
+    foot.append(edit, closeB);
+    side.append(where, body, foot);
+    box.append(wrap, side);
+    back.appendChild(box);
+    document.body.appendChild(back);
+
+    function show() {
+        const cur = order[i], tier = state.tiers.find(t => t.items.includes(cur));
+        img.src = state.images[cur].url;
+        where.textContent = `${tier ? 'Tier ' + tier.name : 'Area gambar'} · ${i + 1}/${order.length}`;
+        body.replaceChildren();
+        const ps = state.props[cur] || [];
+        if (!ps.length) body.appendChild(mk('div', 'dempty', 'Belum ada properti.'));
+        ps.forEach(p => { if (p.t) body.appendChild(mk('div', 'k', p.t)); body.appendChild(mk('div', 'v', p.v)); });
+    }
+    const go = step => { i = (i + step + order.length) % order.length; show(); };
+    function end() { document.removeEventListener('keydown', onKey, true); back.remove(); }
+    function onKey(e) {
+        const k = e.key;
+        if (k === 'Escape' || k === 'ArrowLeft' || k === 'ArrowRight') {
+            e.preventDefault(); e.stopPropagation();
+            if (k === 'Escape') end(); else go(k === 'ArrowLeft' ? -1 : 1);
+        }
+    }
+    document.addEventListener('keydown', onKey, true);
+    back.addEventListener('mousedown', e => { if (e.target === back) end(); });
+    prev.addEventListener('click', () => go(-1));
+    next.addEventListener('click', () => go(1));
+    closeB.addEventListener('click', end);
+    edit.addEventListener('click', () => { const cur = order[i]; end(); openImageProps(cur); });
+    show();
+    closeB.focus();
+}
 
 function openImageProps(id) {
     openPropsEditor('Properti gambar', state.props[id], next => {
@@ -627,6 +683,23 @@ function openPropsEditor(title, current, onSave) {
     list.querySelector('input').focus();
 }
 
+// ---------- Pengingat backup (data hanya ada di browser ini) ----------
+function renderBackupInfo() {
+    const el = document.getElementById('backupInfo');
+    const empty = !state.pool.length && !state.tiers.some(t => t.items.length);
+    if (!db || empty) { el.textContent = ''; el.classList.remove('warn'); return; }
+    const days = state.exportedAt ? Math.floor((Date.now() - state.exportedAt) / 86400000) : null;
+    const changed = state.updatedAt > state.exportedAt;
+    let text, warn;
+    if (days === null) { text = 'Belum pernah di-export'; warn = true; }
+    else {
+        text = 'Export terakhir: ' + (days === 0 ? 'hari ini' : days + ' hari lalu') + (changed ? ' · ada perubahan baru' : '');
+        warn = changed && days >= 7;
+    }
+    el.textContent = (warn ? '⚠ ' : '') + text;
+    el.classList.toggle('warn', warn);
+}
+
 // ---------- Pencarian (menyorot gambar yang properti-nya cocok) ----------
 let searchQ = '';
 let hitCursor = -1;
@@ -676,7 +749,7 @@ function makeItem(id) {
         el.addEventListener('mouseenter', e => showTip(id, e));
         el.addEventListener('mousemove', e => { if (tip.style.display === 'block') moveTip(e); });
         el.addEventListener('mouseleave', hideTip);
-        el.addEventListener('click', e => { if (!e.target.closest('.del')) openImageProps(id); });
+        el.addEventListener('click', e => { if (!e.target.closest('.del')) openDetail(id); });
         el.querySelector('.del').addEventListener('click', () => deleteImage(id));
         itemEls.set(id, el);
     }
@@ -702,7 +775,7 @@ function makeRow(id) {
     row.innerHTML = `
     <div class="label">
       <div class="name" contenteditable="true" spellcheck="false"></div>
-      <button class="tinfo" title="Properti / deskripsi tier"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="2" width="10" height="1.4" rx=".7"/><rect x="1" y="5.3" width="10" height="1.4" rx=".7"/><rect x="1" y="8.6" width="6" height="1.4" rx=".7"/></svg></button>
+      <button class="tinfo"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="2" width="10" height="1.4" rx=".7"/><rect x="1" y="5.3" width="10" height="1.4" rx=".7"/><rect x="1" y="8.6" width="6" height="1.4" rx=".7"/></svg></button>
       <span class="count"></span>
       <button class="tgear" title="Pengaturan tier">⚙</button>
       <button class="tfold" title="Lipat / buka tier">▾</button>
@@ -855,7 +928,7 @@ function defaultTiers() {
 }
 async function createList(name) {
     const id = 'l' + crypto.randomUUID().slice(0, 8);
-    await run('lists', 'readwrite', s => s.put({ id, name, tiers: defaultTiers(), pool: [], fit: 'cover', props: {}, desc: '' }));
+    await run('lists', 'readwrite', s => s.put({ id, name, tiers: defaultTiers(), pool: [], fit: 'cover', props: {}, desc: '', exportedAt: 0, updatedAt: 0 }));
     lists.push({ id, name });
     return id;
 }
@@ -883,6 +956,9 @@ async function loadList(id) {     // baca satu tierlist dari database ke layar
     state.pool = rec.pool;
     state.props = rec.props || {};
     state.desc = rec.desc || '';
+    state.exportedAt = rec.exportedAt || 0;
+    state.updatedAt = rec.updatedAt || 0;
+    dirty = false;
     document.getElementById('listDesc').value = state.desc;
     document.getElementById('search').value = '';      // pencarian dikosongkan saat pindah tierlist
     searchQ = '';
@@ -899,6 +975,7 @@ async function loadList(id) {     // baca satu tierlist dari database ke layar
     updateUndoButtons();
     applyFit();
     render();
+    renderBackupInfo();
 }
 async function switchList(id) {
     if (!db || id === currentId) return;
