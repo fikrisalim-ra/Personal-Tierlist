@@ -63,7 +63,7 @@ const askText = (title, message, value) => modal({ title, message, input: value,
 const fileSafe = n => (n || '').replace(/[\\\/:*?"<>|\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'tierlist';
 
 // Versi file ini (untuk memastikan browser memuat file terbaru, bukan cache)
-const APP_VERSION = '4e-1';
+const APP_VERSION = '4f-1';
 console.log('Tierlist app.js versi', APP_VERSION);
 function showFatal(msg) {
     const el = document.getElementById('status');
@@ -289,6 +289,15 @@ document.getElementById('btnFit').addEventListener('click', () => {
     state.fit = state.fit === 'cover' ? 'contain' : 'cover';
     applyFit();
     saveSoon();
+});
+const searchEl = document.getElementById('search');
+searchEl.addEventListener('input', () => { searchQ = searchEl.value.trim().toLowerCase(); hitCursor = -1; applySearch(); });
+searchEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); jumpNext(); }
+    else if (e.key === 'Escape') { searchEl.value = ''; searchQ = ''; applySearch(); searchEl.blur(); }
+});
+document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); searchEl.focus(); searchEl.select(); }
 });
 document.getElementById('btnAddTier').addEventListener('click', () => addTier());
 document.getElementById('btnUndo').addEventListener('click', undo);
@@ -618,6 +627,34 @@ function openPropsEditor(title, current, onSave) {
     list.querySelector('input').focus();
 }
 
+// ---------- Pencarian (menyorot gambar yang properti-nya cocok) ----------
+let searchQ = '';
+let hitCursor = -1;
+const matchId = id => !!searchQ && (state.props[id] || []).some(p => (p.t + ' ' + p.v).toLowerCase().includes(searchQ));
+function applySearch() {
+    const q = searchQ;
+    itemEls.forEach((el, id) => {
+        const hit = !!q && matchId(id);
+        el.classList.toggle('hit', hit);
+        el.classList.toggle('dim', !!q && !hit);
+    });
+    rowEls.forEach((row, id) => {
+        const tier = state.tiers.find(t => t.id === id);
+        if (!tier) return;
+        const n = q ? tier.items.filter(matchId).length : 0;
+        row.classList.toggle('hit', n > 0 && !!tier.collapsed);        // tier terlipat yang menyimpan hasil ikut disorot
+        row.querySelector('.count').textContent = `${tier.items.length} gambar` + (q ? ` · ${n} cocok` : '');
+    });
+    const total = q ? idsIn(state).filter(matchId).length : 0;
+    document.getElementById('searchInfo').textContent = q ? (total ? `${total} cocok` : 'tidak ada yang cocok') : '';
+}
+function jumpNext() {                                                // Enter = loncat ke hasil berikutnya
+    const els = [...document.querySelectorAll('.item.hit, .tier.collapsed.hit')];
+    if (!els.length) return;
+    hitCursor = (hitCursor + 1) % els.length;
+    els[hitCursor].scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
 const itemEls = new Map();   // id gambar -> elemen (dibuat sekali, dipakai ulang agar GIF tidak restart)
 const rowEls = new Map();    // id tier -> elemen baris (juga dibuat sekali)
 
@@ -665,7 +702,7 @@ function makeRow(id) {
     row.innerHTML = `
     <div class="label">
       <div class="name" contenteditable="true" spellcheck="false"></div>
-      <span class="tinfo" title="Ada properti, klik untuk mengubah">!</span>
+      <button class="tinfo" title="Properti / deskripsi tier"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="2" width="10" height="1.4" rx=".7"/><rect x="1" y="5.3" width="10" height="1.4" rx=".7"/><rect x="1" y="8.6" width="6" height="1.4" rx=".7"/></svg></button>
       <span class="count"></span>
       <button class="tgear" title="Pengaturan tier">⚙</button>
       <button class="tfold" title="Lipat / buka tier">▾</button>
@@ -807,6 +844,7 @@ function render() {
     });
     syncItems(document.getElementById('pool'), state.pool);
     itemEls.forEach((el, id) => { if (!(id in state.images)) { el.remove(); itemEls.delete(id); } });   // gambar yang sudah dibuang
+    applySearch();
 }
 
 // ---------- Mulai ----------
@@ -846,6 +884,8 @@ async function loadList(id) {     // baca satu tierlist dari database ke layar
     state.props = rec.props || {};
     state.desc = rec.desc || '';
     document.getElementById('listDesc').value = state.desc;
+    document.getElementById('search').value = '';      // pencarian dikosongkan saat pindah tierlist
+    searchQ = '';
     fitDesc();
     state.fit = rec.fit === 'contain' ? 'contain' : 'cover';
     const known = x => x in state.images;
