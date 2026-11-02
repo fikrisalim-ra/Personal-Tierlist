@@ -1,8 +1,12 @@
+/* Tema: biru sangat gelap ala dashboard Guts AI, dengan sentuhan panel kaca ala osu!lazer */
 :root {
-    --bg: #16181d;
-    --panel: #21242b;
-    --text: #e8e8ea;
-    --muted: #8b90a0;
+    --bg: #070b14;
+    --panel: #0e1524;
+    --panel2: #131c30;
+    --border: #1c2740;
+    --text: #e7ecf8;
+    --muted: #7886a8;
+    --accent: #4d8dff;
     --size: 88px;
     --fit: cover;
 }
@@ -36,7 +40,7 @@ header {
 .lists select {
     background: var(--panel);
     color: var(--text);
-    border: 1px solid #3a3f4a;
+    border: 1px solid var(--border);
     border-radius: 6px;
     padding: 5px 8px;
     font: inherit;
@@ -66,7 +70,7 @@ h1 {
 .lists button {
     background: var(--panel);
     color: var(--text);
-    border: 1px solid #3a3f4a;
+    border: 1px solid var(--border);
     border-radius: 6px;
     padding: 6px 12px;
     font: inherit;
@@ -281,8 +285,8 @@ h1 {
     width: 216px;
     padding: 10px;
     display: none;
-    background: #262a33;
-    border: 1px solid #3a3f4a;
+    background: var(--panel2);
+    border: 1px solid var(--border);
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
 }
@@ -319,7 +323,7 @@ h1 {
     width: 36px;
     height: 24px;
     padding: 0;
-    border: 1px solid #3a3f4a;
+    border: 1px solid var(--border);
     border-radius: 4px;
     background: none;
     cursor: pointer;
@@ -410,4 +414,257 @@ h1 {
 
 .tier.collapsed .tfold:hover {
     background: rgba(0, 0, 0, .16);
+}
+
+.mback {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(4, 8, 20, .7);
+}
+
+.modal {
+    width: min(420px, 92vw);
+    padding: 18px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, .55);
+}
+
+.modal h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+}
+
+.modal p {
+    margin: 0 0 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+    white-space: pre-wrap;
+}
+
+.modal input[type=text] {
+    width: 100%;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font: inherit;
+    font-size: 14px;
+}
+
+.modal input[type=text]:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+}
+
+.mbtns {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.mbtns button {
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.mbtns button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.mbtns button.danger {
+    background: #d6453d;
+    border-color: #d6453d;
+    color: #fff;
+}
+
+.mbtns button:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+/* ---- tampilan: kartu membulat, label monospace, panel kaca ---- */
+body {
+    background: radial-gradient(1100px 480px at 50% -160px, rgba(77, 141, 255, .14), transparent 70%), var(--bg);
+}
+
+h1 {
+    letter-spacing: -.01em;
+}
+
+#status,
+#usage,
+.count {
+    font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
+    font-size: 12px;
+}
+
+.tier,
+.pool {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.tier {
+    margin-bottom: 8px;
+}
+
+.actions button,
+.addrow button,
+.lists button,
+.lists select {
+    border-radius: 8px;
+}
+
+.item {
+    border-radius: 6px;
+}
+
+.item:hover {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+#tpop,
+.modal {
+    background: rgba(19, 28, 48, .86);
+    backdrop-filter: blur(14px);
+    border-radius: 14px;
+}
+
+.mback {
+    backdrop-filter: blur(3px);
+}
+
+/* ---- properti gambar ---- */
+.item.has-props::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    bottom: 3px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, .55);
+    pointer-events: none;
+}
+
+.tip {
+    position: fixed;
+    z-index: 60;
+    display: none;
+    max-width: 320px;
+    padding: 10px 12px;
+    pointer-events: none;
+    background: rgba(7, 11, 22, .92);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .55);
+    backdrop-filter: blur(10px);
+}
+
+.tip .k {
+    margin-top: 8px;
+    font-size: 11px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.tip .k:first-child {
+    margin-top: 0;
+}
+
+.tip .v {
+    font-size: 13px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.modal.wide {
+    width: min(560px, 94vw);
+}
+
+.prow {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: flex-start;
+}
+
+.modal .prow input[type=text] {
+    width: 34%;
+    margin: 0;
+    padding: 7px 9px;
+    font-size: 13px;
+}
+
+.prow textarea {
+    flex: 1;
+    min-height: 36px;
+    padding: 7px 9px;
+    resize: vertical;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font: inherit;
+    font-size: 13px;
+}
+
+.prow input:focus,
+.prow textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+}
+
+.prow .x {
+    width: 30px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.prow .x:hover {
+    color: #ff7b72;
+}
+
+.addprop {
+    margin: 2px 0 14px;
+    padding: 6px 12px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.addprop:hover {
+    color: var(--text);
+    border-color: var(--muted);
 }

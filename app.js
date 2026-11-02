@@ -63,7 +63,7 @@ const askText = (title, message, value) => modal({ title, message, input: value,
 const fileSafe = n => (n || '').replace(/[\\\/:*?"<>|\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'tierlist';
 
 // Versi file ini (untuk memastikan browser memuat file terbaru, bukan cache)
-const APP_VERSION = '4c-1';
+const APP_VERSION = '4d-1';
 console.log('Tierlist app.js versi', APP_VERSION);
 function showFatal(msg) {
     const el = document.getElementById('status');
@@ -84,6 +84,7 @@ const state = {
     pool: [],      // id gambar yang belum masuk tier
     images: {},    // id -> { url }  (url sementara; file aslinya ada di IndexedDB)
 };
+state.props = {};      // properti teks per gambar: id -> [{ t: judul, v: isi }]
 state.fit = 'cover';   // 'cover' = isi penuh (dipotong), 'contain' = utuh (ada ruang kosong)
 let dragId = null;       // id gambar yang sedang diseret
 let dragTierId = null;   // id tier yang sedang diseret (lewat pegangan ⠿)
@@ -167,7 +168,7 @@ async function saveNow() {
     clearTimeout(saveTimer);
     if (!db || !currentId) return;
     try {
-        await run('lists', 'readwrite', s => s.put({ id: currentId, name: curName(), tiers: state.tiers, pool: state.pool, fit: state.fit }));
+        await run('lists', 'readwrite', s => s.put({ id: currentId, name: curName(), tiers: state.tiers, pool: state.pool, fit: state.fit, props: liveProps() }));
         statusEl.textContent = 'Tersimpan';
         showUsage();
     } catch (err) {
@@ -198,7 +199,7 @@ async function exportJSON() {
         for (const r of rows) images.push({ id: r.id, type: r.blob.type, data: await blobToDataURL(r.blob) });
         const payload = {
             app: 'tierlist', version: 1, name: curName(), exportedAt: new Date().toISOString(),
-            tiers: state.tiers, pool: state.pool, fit: state.fit, images,
+            tiers: state.tiers, pool: state.pool, fit: state.fit, props: liveProps(), images,
         };
         const file = new Blob([JSON.stringify(payload)], { type: 'application/json' });
         const a = document.createElement('a');
@@ -255,6 +256,8 @@ async function importJSON(file) {
         const remap = ids => ids.map(x => idMap.get(x));
         tiers.forEach(t => { t.items = remap(t.items); });
         const newPool = remap(pool);
+        const newProps = {};      // properti ikut dipindah ke id gambar yang baru
+        Object.entries(data.props || {}).forEach(([oldId, list]) => { if (idMap.has(oldId)) { const c = cleanProps(list); if (c.length) newProps[idMap.get(oldId)] = c; } });
         const name = String(data.name || file.name.replace(/\.json$/i, '') || 'Import').slice(0, 60);
         const id = 'l' + crypto.randomUUID().slice(0, 8);
 
@@ -264,7 +267,7 @@ async function importJSON(file) {
             const t = db.transaction(['images', 'lists'], 'readwrite');
             const imgStore = t.objectStore('images');
             blobs.forEach((blob, oldId) => imgStore.put({ id: idMap.get(oldId), blob, listId: id }));
-            t.objectStore('lists').put({ id, name, tiers, pool: newPool, fit });
+            t.objectStore('lists').put({ id, name, tiers, pool: newPool, fit, props: newProps });
             t.oncomplete = resolve;
             t.onerror = () => reject(t.error);
             t.onabort = () => reject(t.error);
@@ -312,7 +315,7 @@ const undoStack = [], redoStack = [];
 const trash = {};   // gambar yang "dihapus" tapi masih bisa dikembalikan lewat undo: id -> { url, blob }
 
 const idsIn = snap => [...snap.pool, ...snap.tiers.flatMap(t => t.items)];
-const takeSnapshot = () => ({ tiers: structuredClone(state.tiers), pool: [...state.pool] });
+const takeSnapshot = () => ({ tiers: structuredClone(state.tiers), pool: [...state.pool], props: structuredClone(state.props) });
 
 function pushUndo() {            // panggil SEBELUM mengubah data
     undoStack.push(takeSnapshot());
@@ -354,6 +357,7 @@ function restore(snap) {
     state.tiers = structuredClone(snap.tiers);
     state.tiers.forEach(t => { if (folded.has(t.id)) t.collapsed = folded.get(t.id); });
     state.pool = [...snap.pool];
+    state.props = structuredClone(snap.props || {});
     for (const id of idsIn(snap)) {            // kembalikan gambar yang tadinya dihapus
         if (state.images[id] || !trash[id]) continue;
         state.images[id] = trash[id];
@@ -519,6 +523,83 @@ function setAllFolded(value) {
 }
 
 // ---------- Tampilan ----------
+// ---------- Properti per gambar (teks bebas, opsional) ----------
+const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const hasProps = id => !!(state.props[id] && state.props[id].length);
+const liveProps = () => Object.fromEntries(Object.entries(state.props).filter(([id]) => id in state.images));
+function cleanProps(list) {          // dipakai juga saat import: jangan percaya isi file begitu saja
+    return (Array.isArray(list) ? list : []).slice(0, 20)
+        .map(p => ({ t: String((p && p.t) || '').slice(0, 60), v: String((p && p.v) || '').slice(0, 2000) }))
+        .filter(p => p.t.trim() || p.v.trim());
+}
+
+const tip = mk('div', 'tip');
+document.body.appendChild(tip);
+function hideTip() { tip.style.display = 'none'; }
+function moveTip(e) {
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = e.clientX + 16, y = e.clientY + 16;
+    if (x + w > innerWidth - 8) x = e.clientX - w - 16;
+    if (y + h > innerHeight - 8) y = e.clientY - h - 16;
+    tip.style.left = Math.max(8, x) + 'px';
+    tip.style.top = Math.max(8, y) + 'px';
+}
+function showTip(id, e) {            // seperti kotak info item di game RPG
+    if (!hasProps(id)) return;
+    tip.replaceChildren();
+    state.props[id].forEach(p => { if (p.t) tip.appendChild(mk('div', 'k', p.t)); tip.appendChild(mk('div', 'v', p.v)); });
+    tip.style.display = 'block';
+    moveTip(e);
+}
+
+const titleList = mk('datalist');
+titleList.id = 'ptitles';
+document.body.appendChild(titleList);
+
+function openPropsEditor(id) {
+    hideTip();
+    const used = new Set(Object.values(state.props).flat().map(p => p.t).filter(Boolean));   // saran judul dari properti yang sudah dipakai
+    titleList.replaceChildren(...[...used].map(t => { const o = mk('option'); o.value = t; return o; }));
+    const back = mk('div', 'mback'), box = mk('div', 'modal wide');
+    box.append(mk('h3', '', 'Properti gambar'), mk('p', '', 'Opsional. Judul dan isi bebas, misalnya Nama / Dari anime / Alasan.'));
+    const list = mk('div');
+    const addRow = (p = { t: '', v: '' }) => {
+        const r = mk('div', 'prow'), t = mk('input'), v = mk('textarea'), x = mk('button', 'x', '×');
+        t.type = 'text'; t.value = p.t; t.placeholder = 'Judul'; t.setAttribute('list', 'ptitles'); t.maxLength = 60;
+        v.value = p.v; v.placeholder = 'Isi'; v.rows = 2; v.maxLength = 2000;
+        x.title = 'Hapus properti ini';
+        x.addEventListener('click', () => r.remove());
+        r.append(t, v, x);
+        list.appendChild(r);
+        return t;
+    };
+    (state.props[id] || [{ t: '', v: '' }]).forEach(p => addRow(p));
+    const add = mk('button', 'addprop', '+ Tambah properti');
+    add.addEventListener('click', () => addRow().focus());
+    const btns = mk('div', 'mbtns'), cancel = mk('button', '', 'Batal'), save = mk('button', 'primary', 'Simpan');
+    btns.append(cancel, save);
+    box.append(list, add, btns);
+    back.appendChild(box);
+    document.body.appendChild(back);
+
+    function close() { document.removeEventListener('keydown', onKey, true); back.remove(); }
+    function onKey(e) {
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
+        else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.stopPropagation(); save.click(); }
+    }
+    document.addEventListener('keydown', onKey, true);
+    back.addEventListener('mousedown', e => { if (e.target === back) close(); });
+    cancel.addEventListener('click', close);
+    save.addEventListener('click', () => {
+        const next = cleanProps([...list.children].map(r => ({ t: r.querySelector('input').value, v: r.querySelector('textarea').value })));
+        close();
+        pushUndo();
+        if (next.length) state.props[id] = next; else delete state.props[id];
+        afterChange();
+    });
+    list.querySelector('input').focus();
+}
+
 const itemEls = new Map();   // id gambar -> elemen (dibuat sekali, dipakai ulang agar GIF tidak restart)
 const rowEls = new Map();    // id tier -> elemen baris (juga dibuat sekali)
 
@@ -536,12 +617,18 @@ function makeItem(id) {
             setTimeout(() => el.classList.add('dragging'));
         });
         el.addEventListener('dragend', () => { dragId = null; render(); });
+        el.addEventListener('dragstart', hideTip);
+        el.addEventListener('mouseenter', e => showTip(id, e));
+        el.addEventListener('mousemove', e => { if (tip.style.display === 'block') moveTip(e); });
+        el.addEventListener('mouseleave', hideTip);
+        el.addEventListener('click', e => { if (!e.target.closest('.del')) openPropsEditor(id); });
         el.querySelector('.del').addEventListener('click', () => deleteImage(id));
         itemEls.set(id, el);
     }
     const img = el.firstChild;
     if (img.getAttribute('src') !== state.images[id].url) img.src = state.images[id].url;
     el.classList.remove('dragging');
+    el.classList.toggle('has-props', hasProps(id));
     return el;
 }
 
@@ -705,7 +792,7 @@ function defaultTiers() {
 }
 async function createList(name) {
     const id = 'l' + crypto.randomUUID().slice(0, 8);
-    await run('lists', 'readwrite', s => s.put({ id, name, tiers: defaultTiers(), pool: [], fit: 'cover' }));
+    await run('lists', 'readwrite', s => s.put({ id, name, tiers: defaultTiers(), pool: [], fit: 'cover', props: {} }));
     lists.push({ id, name });
     return id;
 }
@@ -731,6 +818,7 @@ async function loadList(id) {     // baca satu tierlist dari database ke layar
     for (const i of imgs) state.images[i.id] = { url: URL.createObjectURL(i.blob), blob: i.blob };
     state.tiers = rec.tiers;
     state.pool = rec.pool;
+    state.props = rec.props || {};
     state.fit = rec.fit === 'contain' ? 'contain' : 'cover';
     const known = x => x in state.images;
     state.pool = state.pool.filter(known);
