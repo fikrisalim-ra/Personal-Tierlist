@@ -63,7 +63,7 @@ const askText = (title, message, value) => modal({ title, message, input: value,
 const fileSafe = n => (n || '').replace(/[\\\/:*?"<>|\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'tierlist';
 
 // Versi file ini (untuk memastikan browser memuat file terbaru, bukan cache)
-const APP_VERSION = '4d-1';
+const APP_VERSION = '4e-1';
 console.log('Tierlist app.js versi', APP_VERSION);
 function showFatal(msg) {
     const el = document.getElementById('status');
@@ -84,6 +84,7 @@ const state = {
     pool: [],      // id gambar yang belum masuk tier
     images: {},    // id -> { url }  (url sementara; file aslinya ada di IndexedDB)
 };
+state.desc = '';        // deskripsi tierlist (teks bebas, opsional)
 state.props = {};      // properti teks per gambar: id -> [{ t: judul, v: isi }]
 state.fit = 'cover';   // 'cover' = isi penuh (dipotong), 'contain' = utuh (ada ruang kosong)
 let dragId = null;       // id gambar yang sedang diseret
@@ -168,7 +169,7 @@ async function saveNow() {
     clearTimeout(saveTimer);
     if (!db || !currentId) return;
     try {
-        await run('lists', 'readwrite', s => s.put({ id: currentId, name: curName(), tiers: state.tiers, pool: state.pool, fit: state.fit, props: liveProps() }));
+        await run('lists', 'readwrite', s => s.put({ id: currentId, name: curName(), tiers: state.tiers, pool: state.pool, fit: state.fit, props: liveProps(), desc: state.desc }));
         statusEl.textContent = 'Tersimpan';
         showUsage();
     } catch (err) {
@@ -199,7 +200,7 @@ async function exportJSON() {
         for (const r of rows) images.push({ id: r.id, type: r.blob.type, data: await blobToDataURL(r.blob) });
         const payload = {
             app: 'tierlist', version: 1, name: curName(), exportedAt: new Date().toISOString(),
-            tiers: state.tiers, pool: state.pool, fit: state.fit, props: liveProps(), images,
+            tiers: state.tiers, pool: state.pool, fit: state.fit, props: liveProps(), desc: state.desc, images,
         };
         const file = new Blob([JSON.stringify(payload)], { type: 'application/json' });
         const a = document.createElement('a');
@@ -246,6 +247,7 @@ async function importJSON(file) {
             color: okColor(t.color) ? t.color : '#888888',
             items: take(t.items),
             collapsed: !!t.collapsed,
+            props: cleanProps(t.props),
         }));
         const pool = take(data.pool);
         blobs.forEach((_, id) => { if (!seen.has(id)) pool.push(id); });
@@ -267,7 +269,7 @@ async function importJSON(file) {
             const t = db.transaction(['images', 'lists'], 'readwrite');
             const imgStore = t.objectStore('images');
             blobs.forEach((blob, oldId) => imgStore.put({ id: idMap.get(oldId), blob, listId: id }));
-            t.objectStore('lists').put({ id, name, tiers, pool: newPool, fit, props: newProps });
+            t.objectStore('lists').put({ id, name, tiers, pool: newPool, fit, props: newProps, desc: String(data.desc || '').slice(0, 2000) });
             t.oncomplete = resolve;
             t.onerror = () => reject(t.error);
             t.onabort = () => reject(t.error);
@@ -462,6 +464,7 @@ function openTierMenu(tier, labelEl, anchor) {
     <div class="row"><span>Warna lain</span><input type="color"></div>
     <button class="act" data-a="above">↑ Tambah baris di atas</button>
     <button class="act" data-a="below">↓ Tambah baris di bawah</button>
+    <button class="act" data-a="props">ⓘ Properti / deskripsi tier…</button>
     <button class="act danger" data-a="del">Hapus tier</button>`;
     const sw = tpop.querySelector('.sw');
     SWATCHES.forEach(c => {
@@ -485,6 +488,7 @@ function openTierMenu(tier, labelEl, anchor) {
         closeTierMenu();
         if (b.dataset.a === 'above') addTier(idx);
         else if (b.dataset.a === 'below') addTier(idx + 1);
+        else if (b.dataset.a === 'props') openTierProps(tier.id);
         else deleteTier(tier.id);
     }));
     tpop.style.display = 'block';
@@ -544,10 +548,11 @@ function moveTip(e) {
     tip.style.left = Math.max(8, x) + 'px';
     tip.style.top = Math.max(8, y) + 'px';
 }
-function showTip(id, e) {            // seperti kotak info item di game RPG
-    if (!hasProps(id)) return;
+function showTip(id, e) { showTipFor(state.props[id], e); }
+function showTipFor(list, e) {            // seperti kotak info item di game RPG
+    if (!list || !list.length) return;
     tip.replaceChildren();
-    state.props[id].forEach(p => { if (p.t) tip.appendChild(mk('div', 'k', p.t)); tip.appendChild(mk('div', 'v', p.v)); });
+    list.forEach(p => { if (p.t) tip.appendChild(mk('div', 'k', p.t)); tip.appendChild(mk('div', 'v', p.v)); });
     tip.style.display = 'block';
     moveTip(e);
 }
@@ -556,12 +561,27 @@ const titleList = mk('datalist');
 titleList.id = 'ptitles';
 document.body.appendChild(titleList);
 
-function openPropsEditor(id) {
+function openImageProps(id) {
+    openPropsEditor('Properti gambar', state.props[id], next => {
+        pushUndo();
+        if (next.length) state.props[id] = next; else delete state.props[id];
+        afterChange();
+    });
+}
+function openTierProps(tierId) {
+    const t = state.tiers.find(x => x.id === tierId);
+    openPropsEditor(`Properti tier "${t.name}"`, t.props, next => {
+        pushUndo();
+        state.tiers.find(x => x.id === tierId).props = next;      // cari ulang lewat id: undo mengganti objek tier
+        afterChange();
+    });
+}
+function openPropsEditor(title, current, onSave) {
     hideTip();
-    const used = new Set(Object.values(state.props).flat().map(p => p.t).filter(Boolean));   // saran judul dari properti yang sudah dipakai
+    const used = new Set([...Object.values(state.props).flat(), ...state.tiers.flatMap(t => t.props || [])].map(p => p.t).filter(Boolean));   // saran judul dari properti yang sudah dipakai
     titleList.replaceChildren(...[...used].map(t => { const o = mk('option'); o.value = t; return o; }));
     const back = mk('div', 'mback'), box = mk('div', 'modal wide');
-    box.append(mk('h3', '', 'Properti gambar'), mk('p', '', 'Opsional. Judul dan isi bebas, misalnya Nama / Dari anime / Alasan.'));
+    box.append(mk('h3', '', title), mk('p', '', 'Opsional. Judul dan isi bebas, misalnya Nama / Dari anime / Alasan.'));
     const list = mk('div');
     const addRow = (p = { t: '', v: '' }) => {
         const r = mk('div', 'prow'), t = mk('input'), v = mk('textarea'), x = mk('button', 'x', '×');
@@ -573,7 +593,7 @@ function openPropsEditor(id) {
         list.appendChild(r);
         return t;
     };
-    (state.props[id] || [{ t: '', v: '' }]).forEach(p => addRow(p));
+    (current && current.length ? current : [{ t: '', v: '' }]).forEach(p => addRow(p));
     const add = mk('button', 'addprop', '+ Tambah properti');
     add.addEventListener('click', () => addRow().focus());
     const btns = mk('div', 'mbtns'), cancel = mk('button', '', 'Batal'), save = mk('button', 'primary', 'Simpan');
@@ -593,9 +613,7 @@ function openPropsEditor(id) {
     save.addEventListener('click', () => {
         const next = cleanProps([...list.children].map(r => ({ t: r.querySelector('input').value, v: r.querySelector('textarea').value })));
         close();
-        pushUndo();
-        if (next.length) state.props[id] = next; else delete state.props[id];
-        afterChange();
+        onSave(next);
     });
     list.querySelector('input').focus();
 }
@@ -621,7 +639,7 @@ function makeItem(id) {
         el.addEventListener('mouseenter', e => showTip(id, e));
         el.addEventListener('mousemove', e => { if (tip.style.display === 'block') moveTip(e); });
         el.addEventListener('mouseleave', hideTip);
-        el.addEventListener('click', e => { if (!e.target.closest('.del')) openPropsEditor(id); });
+        el.addEventListener('click', e => { if (!e.target.closest('.del')) openImageProps(id); });
         el.querySelector('.del').addEventListener('click', () => deleteImage(id));
         itemEls.set(id, el);
     }
@@ -647,6 +665,7 @@ function makeRow(id) {
     row.innerHTML = `
     <div class="label">
       <div class="name" contenteditable="true" spellcheck="false"></div>
+      <span class="tinfo" title="Ada properti, klik untuk mengubah">!</span>
       <span class="count"></span>
       <button class="tgear" title="Pengaturan tier">⚙</button>
       <button class="tfold" title="Lipat / buka tier">▾</button>
@@ -663,6 +682,11 @@ function makeRow(id) {
     nameEl.addEventListener('blur', () => { nameEdited = false; });
     nameEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nameEl.blur(); } });
     label.querySelector('.tgear').addEventListener('click', e => openTierMenu(T(), label, e.currentTarget));
+    const info = label.querySelector('.tinfo');
+    info.addEventListener('mouseenter', e => showTipFor(T().props, e));
+    info.addEventListener('mousemove', e => { if (tip.style.display === 'block') moveTip(e); });
+    info.addEventListener('mouseleave', hideTip);
+    info.addEventListener('click', () => openTierProps(id));
     label.querySelector('.tfold').addEventListener('click', () => { const t = T(); t.collapsed = !t.collapsed; render(); saveSoon(); });
     const handle = label.querySelector('.thandle');
     handle.addEventListener('dragstart', e => {
@@ -776,6 +800,7 @@ function render() {
         row.classList.remove('moving');
         row.classList.toggle('collapsed', !!tier.collapsed);
         label.querySelector('.count').textContent = `${tier.items.length} gambar`;
+        label.classList.toggle('has-info', !!(tier.props && tier.props.length));
         label.querySelector('.tfold').textContent = tier.collapsed ? '▸' : '▾';
         syncItems(row.lastElementChild, tier.collapsed ? [] : tier.items);   // tier terlipat tidak menampilkan gambar
         if (tiersEl.children[i] !== row) tiersEl.insertBefore(row, tiersEl.children[i] || null);
@@ -792,7 +817,7 @@ function defaultTiers() {
 }
 async function createList(name) {
     const id = 'l' + crypto.randomUUID().slice(0, 8);
-    await run('lists', 'readwrite', s => s.put({ id, name, tiers: defaultTiers(), pool: [], fit: 'cover', props: {} }));
+    await run('lists', 'readwrite', s => s.put({ id, name, tiers: defaultTiers(), pool: [], fit: 'cover', props: {}, desc: '' }));
     lists.push({ id, name });
     return id;
 }
@@ -819,6 +844,9 @@ async function loadList(id) {     // baca satu tierlist dari database ke layar
     state.tiers = rec.tiers;
     state.pool = rec.pool;
     state.props = rec.props || {};
+    state.desc = rec.desc || '';
+    document.getElementById('listDesc').value = state.desc;
+    fitDesc();
     state.fit = rec.fit === 'contain' ? 'contain' : 'cover';
     const known = x => x in state.images;
     state.pool = state.pool.filter(known);
@@ -859,6 +887,12 @@ async function deleteCurrentList() {
     lists = lists.filter(l => l.id !== gone);
     await loadList(lists[0].id);
 }
+function fitDesc() {              // kolom deskripsi menyesuaikan tinggi isinya
+    const ta = document.getElementById('listDesc');
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight + 2, 220) + 'px';
+}
+document.getElementById('listDesc').addEventListener('input', e => { state.desc = e.target.value.slice(0, 2000); fitDesc(); saveSoon(); });
 document.getElementById('listSelect').addEventListener('change', e => switchList(e.target.value));
 document.getElementById('btnNewList').addEventListener('click', async () => {
     if (!db) return dbNotReady();

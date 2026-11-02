@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tierlist Pribadi</title>
-  <link rel="stylesheet" href="style.css?v=4d1">
+  <link rel="stylesheet" href="style.css?v=4e1">
 </head>
 
 <body>
@@ -28,6 +28,8 @@
       <input type="file" id="importFile" accept=".json,application/json" hidden>
     </div>
   </header>
+  <textarea id="listDesc" rows="1" maxlength="2000"
+    placeholder="Deskripsi tierlist (opsional): tulis catatan, aturan penilaian, atau apa saja…"></textarea>
   <div id="tiers"></div>
   <div class="addrow"><button id="btnAddTier">+ Tambah tier</button><button id="btnFoldAll">Lipat semua</button><button
       id="btnUnfoldAll">Buka semua</button></div>
@@ -35,7 +37,7 @@
     <div class="zone" id="pool" data-zone="pool"></div>
   </div>
 
-  <script src="app.js?v=4d1"></script>
+  <script src="app.js?v=4e1"></script>
 </body>
 
 </html>
