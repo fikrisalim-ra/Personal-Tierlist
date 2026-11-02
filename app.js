@@ -1,5 +1,69 @@
+// ---------- Pop-up buatan sendiri (pengganti prompt / confirm / alert bawaan browser) ----------
+function modal({ title, message = '', input = null, ok = 'OK', cancel = 'Batal', danger = false }) {
+    return new Promise(resolve => {
+        const back = document.createElement('div');
+        back.className = 'mback';
+        const box = document.createElement('div');
+        box.className = 'modal';
+        box.setAttribute('role', 'dialog');
+        box.setAttribute('aria-modal', 'true');
+        const h = document.createElement('h3');
+        h.textContent = title;
+        box.appendChild(h);
+        if (message) {
+            const p = document.createElement('p');
+            p.textContent = message;               // textContent: aman, teks tidak dibaca sebagai HTML
+            box.appendChild(p);
+        }
+        let field = null;
+        if (input !== null) {
+            field = document.createElement('input');
+            field.type = 'text';
+            field.value = input;
+            field.maxLength = 60;
+            box.appendChild(field);
+        }
+        const btns = document.createElement('div');
+        btns.className = 'mbtns';
+        if (cancel) {
+            const c = document.createElement('button');
+            c.textContent = cancel;
+            c.addEventListener('click', () => close(null));
+            btns.appendChild(c);
+        }
+        const okB = document.createElement('button');
+        okB.textContent = ok;
+        okB.className = danger ? 'danger' : 'primary';
+        okB.addEventListener('click', () => close(field ? (field.value.trim() || null) : true));
+        btns.appendChild(okB);
+        box.appendChild(btns);
+        back.appendChild(box);
+        back.addEventListener('mousedown', e => { if (e.target === back) close(null); });
+        document.body.appendChild(back);
+
+        const before = document.activeElement;
+        function onKey(e) {
+            if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(null); }
+            else if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); e.stopPropagation(); okB.click(); }
+        }
+        document.addEventListener('keydown', onKey, true);
+        function close(value) {
+            document.removeEventListener('keydown', onKey, true);
+            back.remove();
+            if (before && before.focus) before.focus();
+            resolve(value);
+        }
+        if (field) { field.focus(); field.select(); } else okB.focus();
+    });
+}
+const tell = (title, message) => modal({ title, message, cancel: null });
+const askConfirm = (title, message, ok = 'Ya', danger = false) => modal({ title, message, ok, danger }).then(v => v === true);
+const askText = (title, message, value) => modal({ title, message, input: value, ok: 'Simpan' });
+// nama file yang aman dari nama tierlist (karakter terlarang di Windows dibuang)
+const fileSafe = n => (n || '').replace(/[\\\/:*?"<>|\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'tierlist';
+
 // Versi file ini (untuk memastikan browser memuat file terbaru, bukan cache)
-const APP_VERSION = '3g-1';
+const APP_VERSION = '4c-1';
 console.log('Tierlist app.js versi', APP_VERSION);
 function showFatal(msg) {
     const el = document.getElementById('status');
@@ -29,7 +93,7 @@ let dragTierId = null;   // id tier yang sedang diseret (lewat pegangan ⠿)
 let db = null;
 let initProblem = '';     // alasan database gagal dibuka (kalau gagal)
 function dbNotReady() {
-    alert('Penyimpanan belum siap' + (initProblem ? ': ' + initProblem : ' (masih memuat). Coba lagi sebentar.'));
+    tell('Penyimpanan belum siap', initProblem ? initProblem : 'Halaman masih memuat. Coba lagi sebentar.');
 }
 let lists = [];          // daftar tierlist: [{ id, name }]
 let currentId = null;    // id tierlist yang sedang dibuka
@@ -139,14 +203,14 @@ async function exportJSON() {
         const file = new Blob([JSON.stringify(payload)], { type: 'application/json' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(file);
-        a.download = `tierlist-${new Date().toISOString().slice(0, 10)}.json`;
+        a.download = `${fileSafe(curName())}.json`;      // nama file = nama tierlist
         a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 60000);   // beri waktu browser menyelesaikan unduhan
         statusEl.textContent = 'Export selesai';
     } catch (err) {
         console.error(err);
         statusEl.textContent = 'Export gagal';
-        alert('Export gagal: ' + err.message);
+        tell('Export gagal', err.message);
     }
 }
 
@@ -212,7 +276,7 @@ async function importJSON(file) {
     } catch (err) {
         console.error(err);
         statusEl.textContent = 'Import gagal';
-        alert('Import gagal: ' + err.message);
+        tell('Import gagal', err.message);
     }
 }
 
@@ -228,7 +292,8 @@ document.getElementById('btnFoldAll').addEventListener('click', () => setAllFold
 document.getElementById('btnUnfoldAll').addEventListener('click', () => setAllFolded(false));
 document.addEventListener('keydown', e => {
     if (!(e.ctrlKey || e.metaKey)) return;
-    if (document.activeElement && document.activeElement.isContentEditable) return;   // saat mengetik nama, pakai undo teks bawaan browser
+    const ae = document.activeElement;
+    if (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return;   // saat mengetik, pakai undo teks bawaan browser
     const k = e.key.toLowerCase();
     if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
     else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
@@ -454,20 +519,75 @@ function setAllFolded(value) {
 }
 
 // ---------- Tampilan ----------
+const itemEls = new Map();   // id gambar -> elemen (dibuat sekali, dipakai ulang agar GIF tidak restart)
+const rowEls = new Map();    // id tier -> elemen baris (juga dibuat sekali)
+
 function makeItem(id) {
-    const el = document.createElement('div');
-    el.className = 'item';
-    el.draggable = true;
-    el.innerHTML = `<img src="${state.images[id].url}" alt=""><button class="del" title="Hapus">×</button>`;
-    el.addEventListener('dragstart', e => {
-        dragId = id;
+    let el = itemEls.get(id);
+    if (!el) {
+        el = document.createElement('div');
+        el.className = 'item';
+        el.draggable = true;
+        el.innerHTML = '<img alt=""><button class="del" title="Hapus">×</button>';
+        el.addEventListener('dragstart', e => {
+            dragId = id;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', id);
+            setTimeout(() => el.classList.add('dragging'));
+        });
+        el.addEventListener('dragend', () => { dragId = null; render(); });
+        el.querySelector('.del').addEventListener('click', () => deleteImage(id));
+        itemEls.set(id, el);
+    }
+    const img = el.firstChild;
+    if (img.getAttribute('src') !== state.images[id].url) img.src = state.images[id].url;
+    el.classList.remove('dragging');
+    return el;
+}
+
+// Samakan isi sebuah zona dengan daftar id: hanya memindahkan elemen yang memang posisinya berbeda
+function syncItems(zone, ids) {
+    const want = ids.map(makeItem), keep = new Set(want);
+    [...zone.children].forEach(ch => { if (!keep.has(ch)) ch.remove(); });
+    want.forEach((el, i) => { if (zone.children[i] !== el) zone.insertBefore(el, zone.children[i] || null); });
+}
+
+// Baris tier dibuat sekali. Pengendali selalu mencari tier lewat id (bukan objek lama), karena undo mengganti objeknya.
+function makeRow(id) {
+    const T = () => state.tiers.find(t => t.id === id);
+    const row = document.createElement('div');
+    row.className = 'tier';
+    row.innerHTML = `
+    <div class="label">
+      <div class="name" contenteditable="true" spellcheck="false"></div>
+      <span class="count"></span>
+      <button class="tgear" title="Pengaturan tier">⚙</button>
+      <button class="tfold" title="Lipat / buka tier">▾</button>
+      <div class="thandle" draggable="true" title="Seret untuk memindahkan tier">⠿</div>
+    </div>
+    <div class="zone"></div>`;
+    const label = row.firstElementChild, nameEl = label.querySelector('.name');
+    let nameEdited = false;       // satu sesi mengetik = satu langkah undo
+    nameEl.addEventListener('input', () => {
+        if (!nameEdited) { pushUndo(); nameEdited = true; }
+        T().name = nameEl.textContent;
+        saveSoon();
+    });
+    nameEl.addEventListener('blur', () => { nameEdited = false; });
+    nameEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nameEl.blur(); } });
+    label.querySelector('.tgear').addEventListener('click', e => openTierMenu(T(), label, e.currentTarget));
+    label.querySelector('.tfold').addEventListener('click', () => { const t = T(); t.collapsed = !t.collapsed; render(); saveSoon(); });
+    const handle = label.querySelector('.thandle');
+    handle.addEventListener('dragstart', e => {
+        dragTierId = id;
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', id);
-        setTimeout(() => el.classList.add('dragging'));
+        e.dataTransfer.setDragImage(row, 20, 20);     // yang tampak ikut terseret: satu baris penuh
+        setTimeout(() => row.classList.add('moving'));
     });
-    el.addEventListener('dragend', () => { dragId = null; render(); });
-    el.querySelector('.del').addEventListener('click', () => deleteImage(id));
-    return el;
+    handle.addEventListener('dragend', () => { dragTierId = null; tmarker.remove(); render(); });
+    wireZone(row.lastElementChild, id);
+    return row;
 }
 
 // Garis putih kecil yang menunjukkan di mana gambar akan jatuh
@@ -556,52 +676,25 @@ tiersBox.addEventListener('drop', e => {
 
 function render() {
     const tiersEl = document.getElementById('tiers');
-    tiersEl.innerHTML = '';
-    for (const tier of state.tiers) {
-        const row = document.createElement('div');
-        row.className = 'tier';
-        row.innerHTML = `
-      <div class="label" style="background:${tier.color}">
-        <div class="name" contenteditable="true" spellcheck="false"></div>
-        <span class="count"></span>
-        <button class="tgear" title="Pengaturan tier">⚙</button>
-        <button class="tfold" title="Lipat / buka tier">▾</button>
-        <div class="thandle" draggable="true" title="Seret untuk memindahkan tier">⠿</div>
-      </div>
-      <div class="zone"></div>`;
-        const nameEl = row.querySelector('.name');
-        nameEl.textContent = tier.name;
-        let nameEdited = false;       // satu sesi mengetik = satu langkah undo
-        nameEl.addEventListener('input', () => {
-            if (!nameEdited) { pushUndo(); nameEdited = true; }
-            tier.name = nameEl.textContent;
-            saveSoon();
-        });
-        nameEl.addEventListener('blur', () => { nameEdited = false; });
-        nameEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nameEl.blur(); } });
-        row.querySelector('.tgear').addEventListener('click', e => openTierMenu(tier, row.querySelector('.label'), e.currentTarget));
-        const handle = row.querySelector('.thandle');
-        handle.addEventListener('dragstart', e => {
-            dragTierId = tier.id;
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', tier.id);
-            e.dataTransfer.setDragImage(row, 20, 20);     // yang tampak ikut terseret: satu baris penuh
-            setTimeout(() => row.classList.add('moving'));
-        });
-        handle.addEventListener('dragend', () => { dragTierId = null; tmarker.remove(); render(); });
+    tmarker.remove();
+    document.querySelectorAll('.zone.over').forEach(z => z.classList.remove('over'));
+    const live = new Set(state.tiers.map(t => t.id));
+    rowEls.forEach((row, id) => { if (!live.has(id)) { row.remove(); rowEls.delete(id); } });
+    state.tiers.forEach((tier, i) => {
+        let row = rowEls.get(tier.id);
+        if (!row) { row = makeRow(tier.id); rowEls.set(tier.id, row); }
+        const label = row.firstElementChild, nameEl = label.querySelector('.name');
+        label.style.background = tier.color;
+        if (nameEl.textContent !== tier.name && document.activeElement !== nameEl) nameEl.textContent = tier.name;
+        row.classList.remove('moving');
         row.classList.toggle('collapsed', !!tier.collapsed);
-        row.querySelector('.count').textContent = `${tier.items.length} gambar`;
-        const fold = row.querySelector('.tfold');
-        fold.textContent = tier.collapsed ? '▸' : '▾';
-        fold.addEventListener('click', () => { tier.collapsed = !tier.collapsed; render(); saveSoon(); });
-        const zone = row.querySelector('.zone');
-        if (!tier.collapsed) tier.items.forEach(id => zone.appendChild(makeItem(id)));   // tier terlipat tidak perlu digambar
-        wireZone(zone, tier.id);
-        tiersEl.appendChild(row);
-    }
-    const poolEl = document.getElementById('pool');
-    poolEl.innerHTML = '';
-    state.pool.forEach(id => poolEl.appendChild(makeItem(id)));
+        label.querySelector('.count').textContent = `${tier.items.length} gambar`;
+        label.querySelector('.tfold').textContent = tier.collapsed ? '▸' : '▾';
+        syncItems(row.lastElementChild, tier.collapsed ? [] : tier.items);   // tier terlipat tidak menampilkan gambar
+        if (tiersEl.children[i] !== row) tiersEl.insertBefore(row, tiersEl.children[i] || null);
+    });
+    syncItems(document.getElementById('pool'), state.pool);
+    itemEls.forEach((el, id) => { if (!(id in state.images)) { el.remove(); itemEls.delete(id); } });   // gambar yang sudah dibuang
 }
 
 // ---------- Mulai ----------
@@ -681,22 +774,22 @@ async function deleteCurrentList() {
 document.getElementById('listSelect').addEventListener('change', e => switchList(e.target.value));
 document.getElementById('btnNewList').addEventListener('click', async () => {
     if (!db) return dbNotReady();
-    const name = prompt('Nama tierlist baru:', 'Tierlist ' + (lists.length + 1));
-    if (name && name.trim()) await newList(name.trim().slice(0, 60));
+    const name = await askText('Tierlist baru', 'Beri nama untuk tierlist ini.', 'Tierlist ' + (lists.length + 1));
+    if (name) await newList(name.slice(0, 60));
 });
-document.getElementById('btnRenameList').addEventListener('click', () => {
+document.getElementById('btnRenameList').addEventListener('click', async () => {
     const cur = lists.find(l => l.id === currentId);
     if (!db) return dbNotReady();
-    const name = prompt('Nama tierlist:', cur.name);
-    if (!name || !name.trim()) return;
-    cur.name = name.trim().slice(0, 60);
+    const name = await askText('Ganti nama tierlist', '', cur.name);
+    if (!name) return;
+    cur.name = name.slice(0, 60);
     renderListSelect();
     saveNow();
 });
 document.getElementById('btnDeleteList').addEventListener('click', async () => {
     if (!db) return dbNotReady();
-    if (lists.length < 2) { alert('Minimal harus ada satu tierlist.'); return; }
-    if (confirm(`Hapus tierlist "${curName()}" beserta SEMUA gambarnya? Ini tidak bisa di-undo. Sebaiknya Export dulu.`)) await deleteCurrentList();
+    if (lists.length < 2) { tell('Tidak bisa dihapus', 'Minimal harus ada satu tierlist.'); return; }
+    if (await askConfirm('Hapus tierlist?', `"${curName()}" beserta SEMUA gambarnya akan dihapus permanen dan tidak bisa di-undo. Sebaiknya Export dulu.`, 'Hapus', true)) await deleteCurrentList();
 });
 
 // ---------- Mulai ----------
