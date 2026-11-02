@@ -63,7 +63,7 @@ const askText = (title, message, value) => modal({ title, message, input: value,
 const fileSafe = n => (n || '').replace(/[\\\/:*?"<>|\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'tierlist';
 
 // Versi file ini (untuk memastikan browser memuat file terbaru, bukan cache)
-const APP_VERSION = '4h-1';
+const APP_VERSION = '4i-1';
 console.log('Tierlist app.js versi', APP_VERSION);
 function showFatal(msg) {
     const el = document.getElementById('status');
@@ -309,6 +309,7 @@ searchEl.addEventListener('keydown', e => {
 document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); searchEl.focus(); searchEl.select(); }
 });
+document.getElementById('btnPng').addEventListener('click', exportPNG);
 document.getElementById('backupInfo').addEventListener('click', async () => {
     if (!db) return dbNotReady();
     if (await askConfirm('Export tierlist?', `"${curName()}" akan diunduh sebagai ${fileSafe(curName())}.json.`, 'Export')) exportJSON();
@@ -706,6 +707,153 @@ function openPropsEditor(title, current, onSave) {
     cancel.addEventListener('click', close);
     save.addEventListener('click', () => { const next = form.get(); close(); onSave(next); });
     form.focus();
+}
+
+// ---------- Export PNG (untuk dipamerkan; dipecah otomatis kalau terlalu tinggi) ----------
+const PNG_TILE = 120;        // ukuran tiap gambar di PNG (px)
+const PNG_W = 1280, PNG_LABEL = 150, PNG_GAP = 6, PNG_PAD = 8;
+const PNG_MAX_H = 12000;     // tinggi maksimum satu file (aman untuk batas canvas Chrome/Firefox/Safari)
+const PNG_MAX_ROWS = 25;     // maksimum tier per file
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#000';
+const textColorFor = hex => {
+    const m = /^#([0-9a-f]{6})$/i.exec(hex);
+    if (!m) return '#fff';
+    const n = parseInt(m[1], 16);
+    return (0.299 * (n >> 16 & 255) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) > 150 ? '#111' : '#fff';
+};
+function wrapLines(ctx, text, maxW) {
+    const out = [];
+    String(text).split('\n').forEach(par => {
+        let line = '';
+        par.split(/\s+/).filter(Boolean).forEach(word => {
+            const t = line ? line + ' ' + word : word;
+            if (!line || ctx.measureText(t).width <= maxW) line = t; else { out.push(line); line = word; }
+        });
+        out.push(line);
+    });
+    return out;
+}
+function roundRectPath(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+}
+const pngPerRow = () => Math.max(1, Math.floor((PNG_W - PNG_LABEL - PNG_PAD) / (PNG_TILE + PNG_GAP)));
+const pngRowH = t => {
+    const rows = Math.max(1, Math.ceil(t.items.length / pngPerRow()));
+    return PNG_PAD * 2 + rows * PNG_TILE + (rows - 1) * PNG_GAP;
+};
+function pngHeader(ctx, part) {            // deskripsi hanya di file pertama
+    ctx.font = '15px system-ui, sans-serif';
+    const desc = part === 0 && state.desc.trim() ? wrapLines(ctx, state.desc.trim(), PNG_W - 48) : [];
+    return { desc, h: 24 + 40 + (desc.length ? desc.length * 22 + 8 : 0) + 14 };
+}
+function planPng() {
+    const ctx = document.createElement('canvas').getContext('2d');
+    const chunks = [];
+    let cur = [], h = pngHeader(ctx, 0).h;
+    for (const t of state.tiers) {
+        const th = pngRowH(t) + PNG_GAP;
+        if (cur.length && (cur.length >= PNG_MAX_ROWS || h + th > PNG_MAX_H)) { chunks.push(cur); cur = []; h = pngHeader(ctx, chunks.length).h; }
+        cur.push(t);
+        h += th;
+    }
+    if (cur.length) chunks.push(cur);
+    return chunks;
+}
+async function drawTile(ctx, id, x, y, size) {
+    const rec = state.images[id];
+    ctx.save();
+    roundRectPath(ctx, x, y, size, size, 6);
+    ctx.clip();
+    ctx.fillStyle = 'rgba(0,0,0,.28)';
+    ctx.fillRect(x, y, size, size);
+    try {
+        const bmp = await createImageBitmap(rec.blob);               // GIF: hanya frame pertama
+        const s = state.fit === 'contain' ? Math.min(size / bmp.width, size / bmp.height) : Math.max(size / bmp.width, size / bmp.height);
+        const w = bmp.width * s, h = bmp.height * s;
+        ctx.drawImage(bmp, x + (size - w) / 2, y + (size - h) / 2, w, h);
+        bmp.close();
+    } catch (err) { console.error('Gambar dilewati:', id, err); }
+    ctx.restore();
+}
+async function drawPngChunk(chunk, part, parts) {
+    const ctx0 = document.createElement('canvas').getContext('2d');
+    const head = pngHeader(ctx0, part);
+    const H = head.h + chunk.reduce((s, t) => s + pngRowH(t) + PNG_GAP, 0);
+    const canvas = document.createElement('canvas');
+    canvas.width = PNG_W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const FONT = 'system-ui, "Segoe UI", sans-serif';
+    ctx.fillStyle = cssVar('--bg');
+    ctx.fillRect(0, 0, PNG_W, H);
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = cssVar('--text');
+    ctx.font = `700 28px ${FONT}`;
+    ctx.fillText(curName() + (parts > 1 ? `  (${part + 1}/${parts})` : ''), 24, 56, PNG_W - 48);
+    ctx.fillStyle = cssVar('--muted');
+    ctx.font = `15px ${FONT}`;
+    head.desc.forEach((line, i) => ctx.fillText(line, 24, 84 + i * 22, PNG_W - 48));
+    let y = head.h;
+    for (const t of chunk) {
+        const rh = pngRowH(t);
+        ctx.fillStyle = cssVar('--panel');
+        roundRectPath(ctx, 12, y, PNG_W - 24, rh, 10);
+        ctx.fill();
+        ctx.save();
+        roundRectPath(ctx, 12, y, PNG_W - 24, rh, 10);
+        ctx.clip();
+        ctx.fillStyle = /^#[0-9a-f]{6}$/i.test(t.color) ? t.color : '#888888';
+        ctx.fillRect(12, y, PNG_LABEL - 12, rh);                      // kotak warna + nama tier
+        ctx.restore();
+        ctx.fillStyle = textColorFor(t.color);
+        ctx.font = `700 22px ${FONT}`;
+        ctx.textAlign = 'center';
+        const lines = wrapLines(ctx, t.name || ' ', PNG_LABEL - 36).slice(0, 4);
+        lines.forEach((ln, i) => ctx.fillText(ln, 12 + (PNG_LABEL - 12) / 2, y + rh / 2 + (i - (lines.length - 1) / 2) * 26 + 8, PNG_LABEL - 28));
+        ctx.textAlign = 'left';
+        const perRow = pngPerRow();
+        for (let k = 0; k < t.items.length; k++) {
+            await drawTile(ctx, t.items[k], PNG_LABEL + (k % perRow) * (PNG_TILE + PNG_GAP), y + PNG_PAD + Math.floor(k / perRow) * (PNG_TILE + PNG_GAP), PNG_TILE);
+        }
+        y += rh + PNG_GAP;
+    }
+    return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+}
+function saveBlob(blob, filename) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}
+async function exportPNG() {
+    if (!db) return dbNotReady();
+    const chunks = planPng(), nImg = state.tiers.reduce((s, t) => s + t.items.length, 0);
+    if (!nImg) { tell('Belum ada gambar di tier', 'Pindahkan gambar ke tier dulu, baru di-export jadi PNG.'); return; }
+    const info = `${state.tiers.length} tier dan ${nImg} gambar akan jadi ${chunks.length} file PNG (gambar ${PNG_TILE} px). `
+        + 'GIF menjadi gambar diam dan properti tidak ikut.' + (chunks.length > 1 ? ' Browser mungkin meminta izin untuk mengunduh beberapa file sekaligus.' : '');
+    if (!(await askConfirm('Export PNG', info, 'Export'))) return;
+    try {
+        const base = fileSafe(curName());
+        for (let p = 0; p < chunks.length; p++) {
+            statusEl.textContent = `Membuat PNG ${p + 1}/${chunks.length}…`;
+            const blob = await drawPngChunk(chunks[p], p, chunks.length);
+            if (!blob) throw new Error('Browser gagal membuat gambar (terlalu besar?)');
+            saveBlob(blob, chunks.length > 1 ? `${base} (${p + 1} dari ${chunks.length}).png` : `${base}.png`);
+            await new Promise(r => setTimeout(r, 400));
+        }
+        statusEl.textContent = 'Export PNG selesai';
+    } catch (err) {
+        console.error(err);
+        statusEl.textContent = 'Export PNG gagal';
+        tell('Export PNG gagal', err.message);
+    }
 }
 
 // ---------- Pengingat backup (data hanya ada di browser ini) ----------
