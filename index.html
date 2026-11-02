@@ -4,48 +4,137 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tierlist Pribadi</title>
-  <link rel="stylesheet" href="style.css?v=4j1">
+  <title>Personal Tierlist</title>
+  <meta name="description"
+    content="Tierlist pribadi yang tersimpan di browser. Tanpa akun, tanpa server, gambar tinggal diseret.">
+  <meta name="theme-color" content="#070b14">
+  <!-- FAVICON: taruh file favicon.ico di folder ini, lalu hapus tanda komentar di baris bawah.
+<link rel="icon" href="favicon.ico">
+-->
+  <link rel="stylesheet" href="theme.css?v=5a1">
+  <link rel="stylesheet" href="landing.css?v=5a1">
 </head>
 
 <body>
-  <header>
-    <h1>Tierlist Pribadi</h1>
-    <div class="lists">
-      <select id="listSelect" title="Pilih tierlist"></select>
-      <button id="btnNewList">+ Baru</button>
-      <button id="btnRenameList">Ganti nama</button>
-      <button id="btnDeleteList">Hapus</button>
+
+  <nav class="nav">
+    <a class="brand" href="#atas">Personal Tierlist</a>
+    <div class="navlinks">
+      <a href="#beda">Bedanya</a>
+      <a href="#faq">FAQ</a>
+      <a class="btn small" href="app.html">Buka tierlist</a>
     </div>
-    <input id="search" type="search" placeholder="Cari properti…  (Ctrl+K)" autocomplete="off">
-    <span id="searchInfo"></span>
-    <span id="backupInfo"></span>
-    <span id="status"></span>
-    <span id="usage"></span>
-    <div class="actions">
-      <button id="btnUndo" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
-      <button id="btnRedo" title="Redo (Ctrl+Y)" disabled>↷ Redo</button>
-      <button id="btnFit" title="Cara gambar ditampilkan di kotak">Gambar: Potong</button>
-      <button id="btnPng" title="Simpan tierlist sebagai gambar PNG untuk dibagikan">Export PNG</button>
-      <button id="btnExport" title="Simpan semua (gambar + susunan) jadi satu file JSON">Export</button>
-      <button id="btnImport" title="Ganti tierlist dengan isi file JSON">Import</button>
-      <input type="file" id="importFile" accept=".json,application/json" hidden>
+  </nav>
+
+  <header class="hero" id="atas">
+    <p class="eyebrow">tierlist ku</p>
+    <h1>Personal Tierlist</h1>
+    <p class="lead">Tempat aku nge-rank apa pun. Gambar tinggal diseret, semuanya tersimpan di browser, tanpa akun.</p>
+    <div class="cta">
+      <a class="btn" href="app.html">Buka tierlist</a>
+      <a class="btn ghost" href="#faq">Baca FAQ</a>
+    </div>
+
+    <!-- gambaran tampilan tierlist (hanya hiasan, dibuat dengan CSS) -->
+    <div class="mock" aria-hidden="true">
+      <div class="mrow"><b style="background:#e5534b">S</b><i></i><i></i><i></i></div>
+      <div class="mrow"><b style="background:#e8943a">A</b><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="mrow"><b style="background:#e5c94b">B</b><i></i><i></i></div>
+      <div class="mrow"><b style="background:#6fbf5f">C</b><i></i><i></i><i></i><i></i></div>
     </div>
   </header>
-  <textarea id="listDesc" rows="1" maxlength="2000"
-    placeholder="Deskripsi tierlist (opsional): tulis catatan, aturan penilaian, atau apa saja…"></textarea>
-  <div id="tiers"></div>
-  <div class="addrow"><button id="btnAddTier">+ Tambah tier</button><button id="btnFoldAll">Lipat semua</button><button
-      id="btnUnfoldAll">Buka semua</button></div>
-  <div id="dock">
-    <button class="dock-bar" id="dockToggle"><span class="dt">Inventaris gambar</span><span id="dockCount"></span><span
-        class="chev" id="dockChev">▾</span></button>
-    <div class="dock-body">
-      <div class="zone" id="pool" data-zone="pool"></div>
-    </div>
-  </div>
 
-  <script src="app.js?v=4j1"></script>
+  <main>
+    <section id="beda">
+      <h2>Kenapa bikin sendiri</h2>
+      <p class="sub">Ada banyak tempat bikin tierlist. Ini versi yang kubuat supaya pas dengan caraku mengisinya.</p>
+      <div class="cards">
+        <div class="card">
+          <h3>Seret langsung</h3>
+          <p>Banyak gambar sekaligus dari komputer, langsung jatuh ke tier. Tanpa langkah "pilih gambar".</p>
+        </div>
+        <div class="card">
+          <h3>Salah? Gampang dibenerin</h3>
+          <p>Hapus gambar dengan satu klik, dan ada undo kalau kepencet.</p>
+        </div>
+        <div class="card">
+          <h3>Boleh panjang banget</h3>
+          <p>Ratusan tier pun aman. Tier bisa dilipat, dicari, dan inventaris gambar menempel di bawah layar.</p>
+        </div>
+        <div class="card">
+          <h3>Catatan per gambar</h3>
+          <p>Tiap gambar bisa diberi properti sendiri, muncul saat di-hover seperti info item di game.</p>
+        </div>
+        <div class="card">
+          <h3>Banyak tierlist</h3>
+          <p>Satu untuk karakter, satu untuk game, satu untuk makanan. Semuanya terpisah dan rapi.</p>
+        </div>
+        <div class="card">
+          <h3>Dibawa kemana-mana</h3>
+          <p>Export jadi PNG untuk dipamerkan, atau file JSON sebagai cadangan yang bisa dibuka lagi.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTOH: bagian "contoh tierlist" menyusul setelah tierlist-nya jadi.
+       Taruh PNG-nya di sini, misalnya:
+       <section id="contoh"><h2>Contoh</h2><img src="contoh-1.png" alt="Contoh tierlist"></section> -->
+
+    <section id="faq">
+      <h2>FAQ</h2>
+      <p class="sub">Pertanyaan yang paling sering muncul. Mau nambah? Salin satu blok &lt;details&gt; di bawah, lalu
+        ganti teksnya.</p>
+
+      <details>
+        <summary>Apa bedanya dengan Tiermaker?</summary>
+        <p>Aku bikin ini karena di tempat lain aku harus memilih gambar satu per satu dan susah menghapus gambar yang
+          salah. Di sini gambar diseret langsung dari komputer, bisa dihapus dan di-undo dengan mudah, dan tiap gambar
+          bisa punya catatan sendiri. Ini juga lebih personal: tierlist milikku, tersimpan di browserku.</p>
+      </details>
+      <details>
+        <summary>Apakah perlu membuat akun?</summary>
+        <p>Tidak. Tidak ada daftar, tidak ada login. Buka, lalu langsung pakai.</p>
+      </details>
+      <details>
+        <summary>Di mana data saya disimpan? Apakah ada yang bisa melihat gambar saya?</summary>
+        <p>Semuanya tersimpan di browser kamu sendiri, di perangkat yang kamu pakai. Gambar dan tierlist tidak dikirim
+          ke server mana pun. Situs ini di-host di GitHub Pages, jadi GitHub bisa mencatat kunjungan ke halaman seperti
+          situs web lain pada umumnya, tapi isi tierlist-mu tidak pernah sampai ke sana.</p>
+      </details>
+      <details>
+        <summary>Bagaimana kalau saya membersihkan data browser atau ganti perangkat?</summary>
+        <p>Tierlist-nya ikut hilang, karena datanya memang hanya ada di browser itu. Karena itu ada tombol Export dan
+          pengingat backup di bagian atas. Biasakan export setelah selesai mengedit, dan simpan filenya di tempat lain.
+        </p>
+      </details>
+      <details>
+        <summary>Bagaimana memindahkan tierlist ke perangkat lain?</summary>
+        <p>Klik Export di perangkat lama untuk mendapatkan file JSON, lalu klik Import di perangkat baru dan pilih file
+          itu. Hasil import selalu menjadi tierlist baru, jadi tidak akan menimpa yang sudah ada.</p>
+      </details>
+      <details>
+        <summary>Apakah gratis?</summary>
+        <p>Gratis. Tidak ada iklan dan tidak ada pelacak dari sisiku.</p>
+      </details>
+      <details>
+        <summary>Berapa banyak gambar dan tier yang bisa dipakai?</summary>
+        <p>Aplikasinya sendiri tidak membatasi. Batasnya ada di ruang penyimpanan browser-mu. Gambar biasa dikecilkan
+          otomatis (sisi terpanjang 400 px) supaya hemat tempat, dan saat export PNG, tierlist yang panjang dipecah jadi
+          beberapa file.</p>
+      </details>
+      <details>
+        <summary>Apakah gambar GIF didukung?</summary>
+        <p>Didukung dan tetap bergerak di tierlist. GIF tidak dikecilkan, jadi ukurannya bisa besar. Saat export PNG,
+          GIF menjadi gambar diam.</p>
+      </details>
+    </section>
+  </main>
+
+  <footer>
+    <p>Personal Tierlist · dibuat sendiri, tanpa akun · datamu tinggal di browsermu</p>
+    <p><a href="#atas">Kembali ke atas</a> · <a href="app.html">Buka tierlist</a></p>
+  </footer>
+
 </body>
 
 </html>

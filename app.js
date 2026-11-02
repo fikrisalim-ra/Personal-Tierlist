@@ -63,7 +63,7 @@ const askText = (title, message, value) => modal({ title, message, input: value,
 const fileSafe = n => (n || '').replace(/[\\\/:*?"<>|\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'tierlist';
 
 // Versi file ini (untuk memastikan browser memuat file terbaru, bukan cache)
-const APP_VERSION = '4j-1';
+const APP_VERSION = '5a-1';
 console.log('Tierlist app.js versi', APP_VERSION);
 function showFatal(msg) {
     const el = document.getElementById('status');
@@ -323,6 +323,37 @@ document.getElementById('dockToggle').addEventListener('dragenter', () => { if (
 let dockStart = true;
 try { dockStart = localStorage.getItem('tierlist-dock') !== 'closed'; } catch (e) { /* tidak masalah */ }
 setDock(dockStart);
+// tarik garis di tepi atas inventaris untuk mengubah tinggi (bisa sampai hampir menyentuh header; ditarik ke bawah = menutup)
+const grip = document.getElementById('dockGrip');
+let dockH = 220;
+try { dockH = parseInt(localStorage.getItem('tierlist-dock-h'), 10) || 220; } catch (e) { /* tidak masalah */ }
+const dockChrome = () => grip.offsetHeight + dock.querySelector('.dock-bar').offsetHeight;
+const maxDockH = () => Math.max(120, innerHeight - document.querySelector('header').getBoundingClientRect().bottom - dockChrome() - 12);
+function applyDockH(h) { dockH = Math.min(Math.max(h, 90), maxDockH()); dock.style.setProperty('--dock-h', dockH + 'px'); }
+applyDockH(dockH);
+window.addEventListener('resize', () => applyDockH(dockH));
+grip.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    dock.classList.add('resizing');
+    document.body.classList.add('resizing-dock');
+    const chrome = dockChrome();
+    const move = ev => {
+        const h = innerHeight - ev.clientY - chrome;                     // tepi atas inventaris mengikuti kursor
+        if (h < 50) { if (!dock.classList.contains('closed')) setDock(false); }
+        else { if (dock.classList.contains('closed')) setDock(true); applyDockH(h); }
+    };
+    const up = () => {
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        document.removeEventListener('pointercancel', up);
+        dock.classList.remove('resizing');
+        document.body.classList.remove('resizing-dock');
+        try { localStorage.setItem('tierlist-dock-h', String(dockH)); } catch (err) { /* tidak masalah */ }
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', up);
+});
 if (window.ResizeObserver) new ResizeObserver(() => { document.body.style.paddingBottom = (dock.offsetHeight + 24) + 'px'; }).observe(dock);   // isi halaman tidak tertutup inventaris
 else document.body.style.paddingBottom = '320px';
 document.getElementById('btnAddTier').addEventListener('click', () => addTier());

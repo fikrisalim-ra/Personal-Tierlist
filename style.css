@@ -1,1014 +1,1045 @@
-/* Tema: biru sangat gelap ala dashboard Guts AI, dengan sentuhan panel kaca ala osu!lazer */
-:root {
-    --bg: #070b14;
-    --panel: #0e1524;
-    --panel2: #131c30;
-    --border: #1c2740;
-    --text: #e7ecf8;
-    --muted: #7886a8;
-    --accent: #4d8dff;
-    --size: 88px;
-    --fit: cover;
-}
-
-* {
-    box-sizing: border-box;
-}
-
-body {
-    margin: 0;
-    padding: 24px;
-    background: var(--bg);
-    color: var(--text);
-    font-family: system-ui, sans-serif;
-}
-
-header {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.lists {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-}
-
-.lists select {
-    background: var(--panel);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 5px 8px;
-    font: inherit;
-    font-size: 13px;
-    max-width: 200px;
-}
-
-h1 {
-    font-size: 20px;
-    margin: 0;
-}
-
-#status,
-#usage {
-    font-size: 13px;
-    color: var(--muted);
-}
-
-.actions {
-    margin-left: auto;
-    display: flex;
-    gap: 8px;
-}
-
-.actions button,
-.addrow button,
-.lists button {
-    background: var(--panel);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 6px 12px;
-    font: inherit;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.actions button:hover,
-.addrow button:hover,
-.lists button:hover {
-    border-color: var(--muted);
-}
-
-.addrow {
-    margin-top: 8px;
-    display: flex;
-    gap: 8px;
-}
-
-.tier {
-    display: flex;
-    margin-bottom: 6px;
-    background: var(--panel);
-    min-height: calc(var(--size) + 12px);
-}
-
-.label {
-    width: 110px;
-    flex: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 6px;
-    color: #111;
-    font-weight: 700;
-    text-align: center;
-}
-
-.label .name {
-    width: 100%;
-    outline: none;
-    word-break: break-word;
-}
-
-.label input[type=color] {
-    width: 28px;
-    height: 20px;
-    padding: 0;
-    border: 0;
-    background: none;
-    cursor: pointer;
-}
-
-.zone {
-    flex: 1;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 6px;
-    align-content: flex-start;
-}
-
-.zone.over {
-    outline: 2px dashed var(--muted);
-    outline-offset: -4px;
-}
-
-.pool {
-    margin-top: 20px;
-    background: var(--panel);
-    min-height: 140px;
-    display: flex;
-}
-
-.pool .zone:empty::before {
-    content: "Tarik gambar dari komputermu ke sini (bisa banyak sekaligus)";
-    color: var(--muted);
-    padding: 8px;
-}
-
-.item {
-    position: relative;
-    width: var(--size);
-    height: var(--size);
-    cursor: grab;
-    background: rgba(0, 0, 0, .25);
-    border-radius: 4px;
-}
-
-.item img {
-    width: 100%;
-    height: 100%;
-    object-fit: var(--fit);
-    display: block;
-    border-radius: 4px;
-}
-
-.item.dragging {
-    opacity: .4;
-}
-
-.del {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    width: 22px;
-    height: 22px;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, .75);
-    color: #fff;
-    cursor: pointer;
-    display: none;
-    line-height: 1;
-}
-
-.item:hover .del {
-    display: block;
-}
-
-.label {
-    position: relative;
-}
-
-.tdel {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    width: 20px;
-    height: 20px;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, .35);
-    color: #fff;
-    cursor: pointer;
-    display: none;
-    line-height: 1;
-    font-size: 14px;
-}
-
-.tier:hover .tdel {
-    display: block;
-}
-
-.thandle {
-    position: absolute;
-    top: 2px;
-    left: 4px;
-    cursor: grab;
-    font-size: 16px;
-    line-height: 1;
-    color: rgba(0, 0, 0, .55);
-    display: none;
-    user-select: none;
-}
-
-.tier:hover .thandle {
-    display: block;
-}
-
-.tier.moving {
-    opacity: .4;
-}
-
-.tmarker {
-    height: 4px;
-    background: #fff;
-    border-radius: 2px;
-    margin-bottom: 6px;
-    pointer-events: none;
-}
-
-.marker {
-    width: 4px;
-    height: var(--size);
-    background: #fff;
-    border-radius: 2px;
-    pointer-events: none;
-    flex: none;
-}
-
-.actions button:disabled {
-    opacity: .4;
-    cursor: default;
-}
-
-.tgear {
-    position: absolute;
-    top: 2px;
-    right: 4px;
-    width: 22px;
-    height: 22px;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, .3);
-    color: #fff;
-    cursor: pointer;
-    display: none;
-    font-size: 13px;
-    line-height: 1;
-}
-
-.tier:hover .tgear {
-    display: block;
-}
-
-#tpop {
-    position: fixed;
-    z-index: 50;
-    width: 216px;
-    padding: 10px;
-    display: none;
-    background: var(--panel2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
-}
-
-#tpop .sw {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 6px;
-    margin-bottom: 10px;
-}
-
-#tpop .sw button {
-    height: 26px;
-    padding: 0;
-    border: 2px solid transparent;
-    border-radius: 50%;
-    cursor: pointer;
-}
-
-#tpop .sw button.on {
-    border-color: #fff;
-}
-
-#tpop .row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 12px;
-    color: var(--muted);
-}
-
-#tpop input[type=color] {
-    width: 36px;
-    height: 24px;
-    padding: 0;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: none;
-    cursor: pointer;
-}
-
-#tpop .act {
-    display: block;
-    width: 100%;
-    text-align: left;
-    padding: 6px 8px;
-    border: 0;
-    border-radius: 6px;
-    background: none;
-    color: var(--text);
-    font: inherit;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-#tpop .act:hover {
-    background: rgba(255, 255, 255, .08);
-}
-
-#tpop .act.danger {
-    color: #ff7b72;
-}
-
-.tfold {
-    position: absolute;
-    bottom: 2px;
-    right: 4px;
-    border: 0;
-    background: none;
-    cursor: pointer;
-    color: rgba(0, 0, 0, .6);
-    font-size: 14px;
-    line-height: 1;
-    display: none;
-}
-
-.tier:hover .tfold,
-.tier.collapsed .tfold {
-    display: block;
-}
-
-.count {
-    font-size: 12px;
-    font-weight: 600;
-    opacity: .7;
-    display: none;
-}
-
-.tier.collapsed {
-    min-height: 0;
-}
-
-.tier.collapsed .zone {
-    display: none;
-}
-
-.tier.collapsed .label {
-    width: auto;
-    flex: 1;
-    flex-direction: row;
-    justify-content: flex-start;
-    padding: 4px 36px 4px 24px;
-    gap: 12px;
-}
-
-.tier.collapsed .label .name {
-    width: auto;
-    min-width: 40px;
-}
-
-.tier.collapsed .count {
-    display: block;
-}
-
-/* tier terlipat: tombol buka = area lebar di tengah baris */
-.tier.collapsed .tfold {
-    position: static;
-    flex: 1;
-    align-self: stretch;
-    font-size: 16px;
-    background: rgba(0, 0, 0, .06);
-    border-radius: 4px;
-}
-
-.tier.collapsed .tfold:hover {
-    background: rgba(0, 0, 0, .16);
-}
-
-.mback {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(4, 8, 20, .7);
-}
-
-.modal {
-    width: min(420px, 92vw);
-    padding: 18px;
-    background: var(--panel2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, .55);
-}
-
-.modal h3 {
-    margin: 0 0 8px;
-    font-size: 16px;
-}
-
-.modal p {
-    margin: 0 0 12px;
-    font-size: 13px;
-    line-height: 1.5;
-    color: var(--muted);
-    white-space: pre-wrap;
-}
-
-.modal input[type=text] {
-    width: 100%;
-    margin-bottom: 12px;
-    padding: 8px 10px;
-    background: var(--bg);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font: inherit;
-    font-size: 14px;
-}
-
-.modal input[type=text]:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: -1px;
-}
-
-.mbtns {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-}
-
-.mbtns button {
-    padding: 7px 14px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--panel);
-    color: var(--text);
-    font: inherit;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.mbtns button.primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-}
-
-.mbtns button.danger {
-    background: #d6453d;
-    border-color: #d6453d;
-    color: #fff;
-}
-
-.mbtns button:focus-visible {
-    outline: 2px solid #fff;
-    outline-offset: 2px;
-}
-
-/* ---- tampilan: kartu membulat, label monospace, panel kaca ---- */
-body {
-    background: radial-gradient(1100px 480px at 50% -160px, rgba(77, 141, 255, .14), transparent 70%), var(--bg);
-}
-
-h1 {
-    letter-spacing: -.01em;
-}
-
-#status,
-#usage,
-.count {
-    font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
-    font-size: 12px;
-}
-
-.tier,
-.pool {
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-.tier {
-    margin-bottom: 8px;
-}
-
-.actions button,
-.addrow button,
-.lists button,
-.lists select {
-    border-radius: 8px;
-}
-
-.item {
-    border-radius: 6px;
-}
-
-.item:hover {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
-}
-
-#tpop,
-.modal {
-    background: rgba(19, 28, 48, .86);
-    backdrop-filter: blur(14px);
-    border-radius: 14px;
-}
-
-.mback {
-    backdrop-filter: blur(3px);
-}
-
-/* ---- properti gambar ---- */
-.item.has-props::after {
-    content: '';
-    position: absolute;
-    left: 3px;
-    bottom: 3px;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 0 2px rgba(0, 0, 0, .55);
-    pointer-events: none;
-}
-
-.tip {
-    position: fixed;
-    z-index: 60;
-    display: none;
-    max-width: 320px;
-    padding: 10px 12px;
-    pointer-events: none;
-    background: rgba(7, 11, 22, .92);
-    border: 1px solid var(--accent);
-    border-radius: 10px;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, .55);
-    backdrop-filter: blur(10px);
-}
-
-.tip .k {
-    margin-top: 8px;
-    font-size: 11px;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: var(--accent);
-}
-
-.tip .k:first-child {
-    margin-top: 0;
-}
-
-.tip .v {
-    font-size: 13px;
-    line-height: 1.45;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.modal.wide {
-    width: min(560px, 94vw);
-}
-
-.prow {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
-    align-items: flex-start;
-}
-
-.modal .prow input[type=text] {
-    width: 34%;
-    margin: 0;
-    padding: 7px 9px;
-    font-size: 13px;
-}
-
-.prow textarea {
-    flex: 1;
-    min-height: 36px;
-    padding: 7px 9px;
-    resize: vertical;
-    background: var(--bg);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font: inherit;
-    font-size: 13px;
-}
-
-.prow input:focus,
-.prow textarea:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: -1px;
-}
-
-.prow .x {
-    width: 30px;
-    height: 34px;
-    padding: 0;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: none;
-    color: var(--muted);
-    cursor: pointer;
-}
-
-.prow .x:hover {
-    color: #ff7b72;
-}
-
-.addprop {
-    margin: 2px 0 14px;
-    padding: 6px 12px;
-    border: 1px dashed var(--border);
-    border-radius: 8px;
-    background: none;
-    color: var(--muted);
-    font: inherit;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.addprop:hover {
-    color: var(--text);
-    border-color: var(--muted);
-}
-
-/* ---- deskripsi tierlist & properti tier ---- */
-#listDesc {
-    display: block;
-    width: 100%;
-    margin-bottom: 12px;
-    padding: 10px 12px;
-    resize: none;
-    overflow-y: auto;
-    background: var(--panel);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    font: inherit;
-    font-size: 13px;
-    line-height: 1.5;
-}
-
-#listDesc::placeholder {
-    color: var(--muted);
-}
-
-#listDesc:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: -1px;
-}
-
-/* ---- ikon properti tier: di sebelah gerigi, hanya muncul saat hover ---- */
-.tinfo {
-    position: absolute;
-    top: 2px;
-    right: 30px;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, .3);
-    color: #fff;
-    cursor: pointer;
-}
-
-.tier:hover .label.has-info .tinfo {
-    display: flex;
-}
-
-/* hanya ada kalau tier punya properti */
-.tier.collapsed .label {
-    padding-right: 64px;
-}
-
-/* ---- header menempel di atas supaya pencarian selalu terjangkau di tierlist panjang ---- */
-header {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    margin: 0 -24px 14px;
-    padding: 10px 24px;
-    background: rgba(7, 11, 20, .82);
-    backdrop-filter: blur(12px);
-}
-
-#search {
-    width: 190px;
-    padding: 6px 10px;
-    background: var(--panel);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font: inherit;
-    font-size: 13px;
-}
-
-#search:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: -1px;
-}
-
-#searchInfo {
-    font-family: ui-monospace, Consolas, monospace;
-    font-size: 12px;
-    color: var(--muted);
-}
-
-.item.dim {
-    opacity: .2;
-}
-
-.item.hit {
-    outline: 2px solid #ffcf5a;
-    outline-offset: 1px;
-}
-
-.tier.collapsed.hit .label {
-    box-shadow: inset 0 0 0 2px #ffcf5a;
-}
-
-/* ---- panel detail gambar ---- */
-.modal.detail {
-    display: flex;
-    gap: 16px;
-    width: min(880px, 94vw);
-    padding: 14px;
-}
-
-.dimg {
-    position: relative;
-    flex: 1.4;
-    min-height: 220px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, .35);
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.dimg img {
-    display: block;
-    max-width: 100%;
-    max-height: 72vh;
-    object-fit: contain;
-}
-
-.dnav {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 34px;
-    height: 52px;
-    border: 0;
-    background: rgba(0, 0, 0, .45);
-    color: #fff;
-    font-size: 24px;
-    cursor: pointer;
-}
-
-.dnav.prev {
-    left: 0;
-    border-radius: 0 8px 8px 0;
-}
-
-.dnav.next {
-    right: 0;
-    border-radius: 8px 0 0 8px;
-}
-
-.dnav:hover {
-    background: rgba(77, 141, 255, .55);
-}
-
-.dside {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    max-height: 72vh;
-}
-
-.dwhere {
-    margin-bottom: 12px;
-    font-family: ui-monospace, Consolas, monospace;
-    font-size: 12px;
-    color: var(--muted);
-}
-
-.dprops {
-    flex: 1;
-    overflow-y: auto;
-    margin-bottom: 12px;
-}
-
-.dprops .k {
-    margin-top: 12px;
-    font-size: 11px;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: var(--accent);
-}
-
-.dprops .k:first-child {
-    margin-top: 0;
-}
-
-.dprops .v {
-    font-size: 14px;
-    line-height: 1.5;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.dempty {
-    font-size: 13px;
-    color: var(--muted);
-}
-
-@media (max-width:640px) {
-    .modal.detail {
-        flex-direction: column;
-    }
-
-    .dside {
-        max-height: none;
-    }
-}
-
-/* ---- pengingat backup ---- */
-#backupInfo {
-    font-family: ui-monospace, Consolas, monospace;
-    font-size: 12px;
-    color: var(--muted);
-    cursor: pointer;
-}
-
-#backupInfo.warn {
-    color: #ffcf5a;
-}
-
-/* ---- panel gambar: ikon pensil + mode ubah di tempat ---- */
-.dhead {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.dhead .dwhere {
-    margin-bottom: 0;
-}
-
-.dpencil {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, .08);
-    color: var(--text);
-    cursor: pointer;
-    flex: none;
-}
-
-.dpencil:hover {
-    background: var(--accent);
-}
-
-.dpencil[hidden],
-.dnav[hidden] {
-    display: none;
-}
-
-.dside .prow {
-    display: grid;
-    grid-template-columns: 1fr 30px;
-}
-
-.modal .dside .prow input[type=text] {
-    width: 100%;
-}
-
-.dside .prow textarea {
-    grid-column: 1 / -1;
-    grid-row: 2;
-}
-
-.dside .prow .x {
-    grid-column: 2;
-    grid-row: 1;
-}
-
-/* ---- inventaris gambar: menempel di bawah layar ---- */
-#dock {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 30;
-    background: rgba(14, 21, 36, .94);
-    backdrop-filter: blur(14px);
-    border-top: 1px solid var(--border);
-    box-shadow: 0 -8px 24px rgba(0, 0, 0, .4);
-}
-
-.dock-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 9px 24px;
-    border: 0;
-    background: none;
-    color: var(--text);
-    font: inherit;
-    font-size: 13px;
-    text-align: left;
-    cursor: pointer;
-}
-
-.dock-bar:hover {
-    background: rgba(255, 255, 255, .04);
-}
-
-.dock-bar .dt {
-    font-weight: 600;
-}
-
-.dock-bar #dockCount {
-    font-family: ui-monospace, Consolas, monospace;
-    font-size: 12px;
-    color: var(--muted);
-}
-
-.dock-bar .chev {
-    margin-left: auto;
-    color: var(--muted);
-}
-
-.dock-body {
-    max-height: min(38vh, 280px);
-    overflow-y: auto;
-    padding: 0 24px 14px;
-}
-
-#dock.closed .dock-body {
-    display: none;
-}
-
-#pool {
-    min-height: calc(var(--size) + 12px);
-    border-radius: 10px;
-}
-
-#pool:empty::before {
-    content: "Tarik gambar dari komputermu ke sini (bisa banyak sekaligus)";
-    padding: 8px;
-    color: var(--muted);
-}
+  /* Warna ada di theme.css. Di sini hanya variabel khusus aplikasi. */
+  :root {
+      --size: 88px;
+      --fit: cover;
+  }
+
+  * {
+      box-sizing: border-box;
+  }
+
+  body {
+      margin: 0;
+      padding: 24px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, sans-serif;
+  }
+
+  header {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+  }
+
+  .lists {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+  }
+
+  .lists select {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 8px;
+      font: inherit;
+      font-size: 13px;
+      max-width: 200px;
+  }
+
+  h1 {
+      font-size: 20px;
+      margin: 0;
+  }
+
+  #status,
+  #usage {
+      font-size: 13px;
+      color: var(--muted);
+  }
+
+  .actions {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+  }
+
+  .actions button,
+  .addrow button,
+  .lists button {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+  }
+
+  .actions button:hover,
+  .addrow button:hover,
+  .lists button:hover {
+      border-color: var(--muted);
+  }
+
+  .addrow {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+  }
+
+  .tier {
+      display: flex;
+      margin-bottom: 6px;
+      background: var(--panel);
+      min-height: calc(var(--size) + 12px);
+  }
+
+  .label {
+      width: 110px;
+      flex: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 6px;
+      color: #111;
+      font-weight: 700;
+      text-align: center;
+  }
+
+  .label .name {
+      width: 100%;
+      outline: none;
+      word-break: break-word;
+  }
+
+  .label input[type=color] {
+      width: 28px;
+      height: 20px;
+      padding: 0;
+      border: 0;
+      background: none;
+      cursor: pointer;
+  }
+
+  .zone {
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 6px;
+      align-content: flex-start;
+  }
+
+  .zone.over {
+      outline: 2px dashed var(--muted);
+      outline-offset: -4px;
+  }
+
+  .pool {
+      margin-top: 20px;
+      background: var(--panel);
+      min-height: 140px;
+      display: flex;
+  }
+
+  .pool .zone:empty::before {
+      content: "Tarik gambar dari komputermu ke sini (bisa banyak sekaligus)";
+      color: var(--muted);
+      padding: 8px;
+  }
+
+  .item {
+      position: relative;
+      width: var(--size);
+      height: var(--size);
+      cursor: grab;
+      background: rgba(0, 0, 0, .25);
+      border-radius: 4px;
+  }
+
+  .item img {
+      width: 100%;
+      height: 100%;
+      object-fit: var(--fit);
+      display: block;
+      border-radius: 4px;
+  }
+
+  .item.dragging {
+      opacity: .4;
+  }
+
+  .del {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 22px;
+      height: 22px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, .75);
+      color: #fff;
+      cursor: pointer;
+      display: none;
+      line-height: 1;
+  }
+
+  .item:hover .del {
+      display: block;
+  }
+
+  .label {
+      position: relative;
+  }
+
+  .tdel {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 20px;
+      height: 20px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, .35);
+      color: #fff;
+      cursor: pointer;
+      display: none;
+      line-height: 1;
+      font-size: 14px;
+  }
+
+  .tier:hover .tdel {
+      display: block;
+  }
+
+  .thandle {
+      position: absolute;
+      top: 2px;
+      left: 4px;
+      cursor: grab;
+      font-size: 16px;
+      line-height: 1;
+      color: rgba(0, 0, 0, .55);
+      display: none;
+      user-select: none;
+  }
+
+  .tier:hover .thandle {
+      display: block;
+  }
+
+  .tier.moving {
+      opacity: .4;
+  }
+
+  .tmarker {
+      height: 4px;
+      background: #fff;
+      border-radius: 2px;
+      margin-bottom: 6px;
+      pointer-events: none;
+  }
+
+  .marker {
+      width: 4px;
+      height: var(--size);
+      background: #fff;
+      border-radius: 2px;
+      pointer-events: none;
+      flex: none;
+  }
+
+  .actions button:disabled {
+      opacity: .4;
+      cursor: default;
+  }
+
+  .tgear {
+      position: absolute;
+      top: 2px;
+      right: 4px;
+      width: 22px;
+      height: 22px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, .3);
+      color: #fff;
+      cursor: pointer;
+      display: none;
+      font-size: 13px;
+      line-height: 1;
+  }
+
+  .tier:hover .tgear {
+      display: block;
+  }
+
+  #tpop {
+      position: fixed;
+      z-index: 50;
+      width: 216px;
+      padding: 10px;
+      display: none;
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+  }
+
+  #tpop .sw {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+  }
+
+  #tpop .sw button {
+      height: 26px;
+      padding: 0;
+      border: 2px solid transparent;
+      border-radius: 50%;
+      cursor: pointer;
+  }
+
+  #tpop .sw button.on {
+      border-color: #fff;
+  }
+
+  #tpop .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 12px;
+      color: var(--muted);
+  }
+
+  #tpop input[type=color] {
+      width: 36px;
+      height: 24px;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: none;
+      cursor: pointer;
+  }
+
+  #tpop .act {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 6px 8px;
+      border: 0;
+      border-radius: 6px;
+      background: none;
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+  }
+
+  #tpop .act:hover {
+      background: rgba(255, 255, 255, .08);
+  }
+
+  #tpop .act.danger {
+      color: #ff7b72;
+  }
+
+  .tfold {
+      position: absolute;
+      bottom: 2px;
+      right: 4px;
+      border: 0;
+      background: none;
+      cursor: pointer;
+      color: rgba(0, 0, 0, .6);
+      font-size: 14px;
+      line-height: 1;
+      display: none;
+  }
+
+  .tier:hover .tfold,
+  .tier.collapsed .tfold {
+      display: block;
+  }
+
+  .count {
+      font-size: 12px;
+      font-weight: 600;
+      opacity: .7;
+      display: none;
+  }
+
+  .tier.collapsed {
+      min-height: 0;
+  }
+
+  .tier.collapsed .zone {
+      display: none;
+  }
+
+  .tier.collapsed .label {
+      width: auto;
+      flex: 1;
+      flex-direction: row;
+      justify-content: flex-start;
+      padding: 4px 36px 4px 24px;
+      gap: 12px;
+  }
+
+  .tier.collapsed .label .name {
+      width: auto;
+      min-width: 40px;
+  }
+
+  .tier.collapsed .count {
+      display: block;
+  }
+
+  /* tier terlipat: tombol buka = area lebar di tengah baris */
+  .tier.collapsed .tfold {
+      position: static;
+      flex: 1;
+      align-self: stretch;
+      font-size: 16px;
+      background: rgba(0, 0, 0, .06);
+      border-radius: 4px;
+  }
+
+  .tier.collapsed .tfold:hover {
+      background: rgba(0, 0, 0, .16);
+  }
+
+  .mback {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(4, 8, 20, .7);
+  }
+
+  .modal {
+      width: min(420px, 92vw);
+      padding: 18px;
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, .55);
+  }
+
+  .modal h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+  }
+
+  .modal p {
+      margin: 0 0 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--muted);
+      white-space: pre-wrap;
+  }
+
+  .modal input[type=text] {
+      width: 100%;
+      margin-bottom: 12px;
+      padding: 8px 10px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font: inherit;
+      font-size: 14px;
+  }
+
+  .modal input[type=text]:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: -1px;
+  }
+
+  .mbtns {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+  }
+
+  .mbtns button {
+      padding: 7px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+  }
+
+  .mbtns button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+  }
+
+  .mbtns button.danger {
+      background: #d6453d;
+      border-color: #d6453d;
+      color: #fff;
+  }
+
+  .mbtns button:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: 2px;
+  }
+
+  /* ---- tampilan: kartu membulat, label monospace, panel kaca ---- */
+  body {
+      background: radial-gradient(1100px 480px at 50% -160px, rgba(77, 141, 255, .14), transparent 70%), var(--bg);
+  }
+
+  h1 {
+      letter-spacing: -.01em;
+  }
+
+  #status,
+  #usage,
+  .count {
+      font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
+      font-size: 12px;
+  }
+
+  .tier,
+  .pool {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+  }
+
+  .tier {
+      margin-bottom: 8px;
+  }
+
+  .actions button,
+  .addrow button,
+  .lists button,
+  .lists select {
+      border-radius: 8px;
+  }
+
+  .item {
+      border-radius: 6px;
+  }
+
+  .item:hover {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+  }
+
+  #tpop,
+  .modal {
+      background: rgba(19, 28, 48, .86);
+      backdrop-filter: blur(14px);
+      border-radius: 14px;
+  }
+
+  .mback {
+      backdrop-filter: blur(3px);
+  }
+
+  /* ---- properti gambar ---- */
+  .item.has-props::after {
+      content: '';
+      position: absolute;
+      left: 3px;
+      bottom: 3px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, .55);
+      pointer-events: none;
+  }
+
+  .tip {
+      position: fixed;
+      z-index: 60;
+      display: none;
+      max-width: 320px;
+      padding: 10px 12px;
+      pointer-events: none;
+      background: rgba(7, 11, 22, .92);
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, .55);
+      backdrop-filter: blur(10px);
+  }
+
+  .tip .k {
+      margin-top: 8px;
+      font-size: 11px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--accent);
+  }
+
+  .tip .k:first-child {
+      margin-top: 0;
+  }
+
+  .tip .v {
+      font-size: 13px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+  }
+
+  .modal.wide {
+      width: min(560px, 94vw);
+  }
+
+  .prow {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: flex-start;
+  }
+
+  .modal .prow input[type=text] {
+      width: 34%;
+      margin: 0;
+      padding: 7px 9px;
+      font-size: 13px;
+  }
+
+  .prow textarea {
+      flex: 1;
+      min-height: 36px;
+      padding: 7px 9px;
+      resize: vertical;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font: inherit;
+      font-size: 13px;
+  }
+
+  .prow input:focus,
+  .prow textarea:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: -1px;
+  }
+
+  .prow .x {
+      width: 30px;
+      height: 34px;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: none;
+      color: var(--muted);
+      cursor: pointer;
+  }
+
+  .prow .x:hover {
+      color: #ff7b72;
+  }
+
+  .addprop {
+      margin: 2px 0 14px;
+      padding: 6px 12px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      background: none;
+      color: var(--muted);
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+  }
+
+  .addprop:hover {
+      color: var(--text);
+      border-color: var(--muted);
+  }
+
+  /* ---- deskripsi tierlist & properti tier ---- */
+  #listDesc {
+      display: block;
+      width: 100%;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      resize: none;
+      overflow-y: auto;
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font: inherit;
+      font-size: 13px;
+      line-height: 1.5;
+  }
+
+  #listDesc::placeholder {
+      color: var(--muted);
+  }
+
+  #listDesc:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: -1px;
+  }
+
+  /* ---- ikon properti tier: di sebelah gerigi, hanya muncul saat hover ---- */
+  .tinfo {
+      position: absolute;
+      top: 2px;
+      right: 30px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, .3);
+      color: #fff;
+      cursor: pointer;
+  }
+
+  .tier:hover .label.has-info .tinfo {
+      display: flex;
+  }
+
+  /* hanya ada kalau tier punya properti */
+  .tier.collapsed .label {
+      padding-right: 64px;
+  }
+
+  /* ---- header menempel di atas supaya pencarian selalu terjangkau di tierlist panjang ---- */
+  header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      margin: 0 -24px 14px;
+      padding: 10px 24px;
+      background: rgba(7, 11, 20, .82);
+      backdrop-filter: blur(12px);
+  }
+
+  #search {
+      width: 190px;
+      padding: 6px 10px;
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font: inherit;
+      font-size: 13px;
+  }
+
+  #search:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: -1px;
+  }
+
+  #searchInfo {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 12px;
+      color: var(--muted);
+  }
+
+  .item.dim {
+      opacity: .2;
+  }
+
+  .item.hit {
+      outline: 2px solid #ffcf5a;
+      outline-offset: 1px;
+  }
+
+  .tier.collapsed.hit .label {
+      box-shadow: inset 0 0 0 2px #ffcf5a;
+  }
+
+  /* ---- panel detail gambar ---- */
+  .modal.detail {
+      display: flex;
+      gap: 16px;
+      width: min(880px, 94vw);
+      padding: 14px;
+  }
+
+  .dimg {
+      position: relative;
+      flex: 1.4;
+      min-height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, .35);
+      border-radius: 10px;
+      overflow: hidden;
+  }
+
+  .dimg img {
+      display: block;
+      max-width: 100%;
+      max-height: 72vh;
+      object-fit: contain;
+  }
+
+  .dnav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 34px;
+      height: 52px;
+      border: 0;
+      background: rgba(0, 0, 0, .45);
+      color: #fff;
+      font-size: 24px;
+      cursor: pointer;
+  }
+
+  .dnav.prev {
+      left: 0;
+      border-radius: 0 8px 8px 0;
+  }
+
+  .dnav.next {
+      right: 0;
+      border-radius: 8px 0 0 8px;
+  }
+
+  .dnav:hover {
+      background: rgba(77, 141, 255, .55);
+  }
+
+  .dside {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      max-height: 72vh;
+  }
+
+  .dwhere {
+      margin-bottom: 12px;
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 12px;
+      color: var(--muted);
+  }
+
+  .dprops {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 12px;
+  }
+
+  .dprops .k {
+      margin-top: 12px;
+      font-size: 11px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--accent);
+  }
+
+  .dprops .k:first-child {
+      margin-top: 0;
+  }
+
+  .dprops .v {
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+  }
+
+  .dempty {
+      font-size: 13px;
+      color: var(--muted);
+  }
+
+  @media (max-width:640px) {
+      .modal.detail {
+          flex-direction: column;
+      }
+
+      .dside {
+          max-height: none;
+      }
+  }
+
+  /* ---- pengingat backup ---- */
+  #backupInfo {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+  }
+
+  #backupInfo.warn {
+      color: #ffcf5a;
+  }
+
+  /* ---- panel gambar: ikon pensil + mode ubah di tempat ---- */
+  .dhead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+  }
+
+  .dhead .dwhere {
+      margin-bottom: 0;
+  }
+
+  .dpencil {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .08);
+      color: var(--text);
+      cursor: pointer;
+      flex: none;
+  }
+
+  .dpencil:hover {
+      background: var(--accent);
+  }
+
+  .dpencil[hidden],
+  .dnav[hidden] {
+      display: none;
+  }
+
+  .dside .prow {
+      display: grid;
+      grid-template-columns: 1fr 30px;
+  }
+
+  .modal .dside .prow input[type=text] {
+      width: 100%;
+  }
+
+  .dside .prow textarea {
+      grid-column: 1 / -1;
+      grid-row: 2;
+  }
+
+  .dside .prow .x {
+      grid-column: 2;
+      grid-row: 1;
+  }
+
+  /* ---- inventaris gambar: menempel di bawah layar ---- */
+  #dock {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 30;
+      background: rgba(14, 21, 36, .94);
+      backdrop-filter: blur(14px);
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -8px 24px rgba(0, 0, 0, .4);
+  }
+
+  .dock-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 9px 24px;
+      border: 0;
+      background: none;
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+  }
+
+  .dock-bar:hover {
+      background: rgba(255, 255, 255, .04);
+  }
+
+  .dock-bar .dt {
+      font-weight: 600;
+  }
+
+  .dock-bar #dockCount {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 12px;
+      color: var(--muted);
+  }
+
+  .dock-bar .chev {
+      margin-left: auto;
+      color: var(--muted);
+  }
+
+  .dock-body {
+      height: var(--dock-h, 220px);
+      overflow-y: auto;
+      padding: 0 24px 14px;
+      transition: height .22s ease;
+  }
+
+  #dock.closed .dock-body {
+      height: 0;
+      padding-bottom: 0;
+      overflow: hidden;
+  }
+
+  #dock.resizing .dock-body {
+      transition: none;
+  }
+
+  #dockGrip {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 12px;
+      cursor: ns-resize;
+      touch-action: none;
+  }
+
+  #dockGrip span {
+      width: 44px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+  }
+
+  #dockGrip:hover span,
+  #dock.resizing #dockGrip span {
+      background: var(--accent);
+  }
+
+  body.resizing-dock {
+      user-select: none;
+      cursor: ns-resize;
+  }
+
+  h1 a {
+      color: inherit;
+      text-decoration: none;
+  }
+
+  #pool {
+      min-height: calc(var(--size) + 12px);
+      border-radius: 10px;
+  }
+
+  #pool:empty::before {
+      content: "Tarik gambar dari komputermu ke sini (bisa banyak sekaligus)";
+      padding: 8px;
+      color: var(--muted);
+  }

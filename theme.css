@@ -1,0 +1,13 @@
+/* Palet warna Personal Tierlist. Ubah di sini, semua halaman ikut berubah. */
+:root {
+  --bg: #070b14;
+  /* latar halaman */
+  --panel: #0e1524;
+  /* kartu / baris */
+  --panel2: #131c30;
+  /* pop-up / menu */
+  --border: #1c2740;
+  --text: #e7ecf8;
+  --muted: #7886a8;
+  --accent: #4d8dff;
+}
