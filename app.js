@@ -63,7 +63,7 @@ const askText = (title, message, value) => modal({ title, message, input: value,
 const fileSafe = n => (n || '').replace(/[\\\/:*?"<>|\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'tierlist';
 
 // Versi file ini (untuk memastikan browser memuat file terbaru, bukan cache)
-const APP_VERSION = '4g-1';
+const APP_VERSION = '4h-1';
 console.log('Tierlist app.js versi', APP_VERSION);
 function showFatal(msg) {
     const el = document.getElementById('status');
@@ -309,7 +309,10 @@ searchEl.addEventListener('keydown', e => {
 document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); searchEl.focus(); searchEl.select(); }
 });
-document.getElementById('backupInfo').addEventListener('click', exportJSON);
+document.getElementById('backupInfo').addEventListener('click', async () => {
+    if (!db) return dbNotReady();
+    if (await askConfirm('Export tierlist?', `"${curName()}" akan diunduh sebagai ${fileSafe(curName())}.json.`, 'Export')) exportJSON();
+});
 document.getElementById('btnAddTier').addEventListener('click', () => addTier());
 document.getElementById('btnUndo').addEventListener('click', undo);
 document.getElementById('btnRedo').addEventListener('click', redo);
@@ -317,6 +320,7 @@ document.getElementById('btnFoldAll').addEventListener('click', () => setAllFold
 document.getElementById('btnUnfoldAll').addEventListener('click', () => setAllFolded(false));
 document.addEventListener('keydown', e => {
     if (!(e.ctrlKey || e.metaKey)) return;
+    if (document.querySelector('.mback')) return;      // saat ada pop-up/panel terbuka, undo aplikasi dimatikan
     const ae = document.activeElement;
     if (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return;   // saat mengetik, pakai undo teks bawaan browser
     const k = e.key.toLowerCase();
@@ -581,73 +585,11 @@ const titleList = mk('datalist');
 titleList.id = 'ptitles';
 document.body.appendChild(titleList);
 
-// ---------- Panel detail gambar (gambar besar + properti) ----------
-function openDetail(id) {
-    hideTip();
-    const order = [...state.tiers.flatMap(t => t.items), ...state.pool];      // urutan seperti di layar
-    let i = Math.max(0, order.indexOf(id));
-    const back = mk('div', 'mback'), box = mk('div', 'modal detail');
-    const wrap = mk('div', 'dimg'), img = mk('img');
-    const prev = mk('button', 'dnav prev', '‹'), next = mk('button', 'dnav next', '›');
-    wrap.append(img, prev, next);
-    const side = mk('div', 'dside'), where = mk('div', 'dwhere'), body = mk('div', 'dprops'), foot = mk('div', 'mbtns');
-    const edit = mk('button', '', 'Ubah properti'), closeB = mk('button', 'primary', 'Tutup');
-    foot.append(edit, closeB);
-    side.append(where, body, foot);
-    box.append(wrap, side);
-    back.appendChild(box);
-    document.body.appendChild(back);
-
-    function show() {
-        const cur = order[i], tier = state.tiers.find(t => t.items.includes(cur));
-        img.src = state.images[cur].url;
-        where.textContent = `${tier ? 'Tier ' + tier.name : 'Area gambar'} · ${i + 1}/${order.length}`;
-        body.replaceChildren();
-        const ps = state.props[cur] || [];
-        if (!ps.length) body.appendChild(mk('div', 'dempty', 'Belum ada properti.'));
-        ps.forEach(p => { if (p.t) body.appendChild(mk('div', 'k', p.t)); body.appendChild(mk('div', 'v', p.v)); });
-    }
-    const go = step => { i = (i + step + order.length) % order.length; show(); };
-    function end() { document.removeEventListener('keydown', onKey, true); back.remove(); }
-    function onKey(e) {
-        const k = e.key;
-        if (k === 'Escape' || k === 'ArrowLeft' || k === 'ArrowRight') {
-            e.preventDefault(); e.stopPropagation();
-            if (k === 'Escape') end(); else go(k === 'ArrowLeft' ? -1 : 1);
-        }
-    }
-    document.addEventListener('keydown', onKey, true);
-    back.addEventListener('mousedown', e => { if (e.target === back) end(); });
-    prev.addEventListener('click', () => go(-1));
-    next.addEventListener('click', () => go(1));
-    closeB.addEventListener('click', end);
-    edit.addEventListener('click', () => { const cur = order[i]; end(); openImageProps(cur); });
-    show();
-    closeB.focus();
-}
-
-function openImageProps(id) {
-    openPropsEditor('Properti gambar', state.props[id], next => {
-        pushUndo();
-        if (next.length) state.props[id] = next; else delete state.props[id];
-        afterChange();
-    });
-}
-function openTierProps(tierId) {
-    const t = state.tiers.find(x => x.id === tierId);
-    openPropsEditor(`Properti tier "${t.name}"`, t.props, next => {
-        pushUndo();
-        state.tiers.find(x => x.id === tierId).props = next;      // cari ulang lewat id: undo mengganti objek tier
-        afterChange();
-    });
-}
-function openPropsEditor(title, current, onSave) {
-    hideTip();
-    const used = new Set([...Object.values(state.props).flat(), ...state.tiers.flatMap(t => t.props || [])].map(p => p.t).filter(Boolean));   // saran judul dari properti yang sudah dipakai
-    titleList.replaceChildren(...[...used].map(t => { const o = mk('option'); o.value = t; return o; }));
-    const back = mk('div', 'mback'), box = mk('div', 'modal wide');
-    box.append(mk('h3', '', title), mk('p', '', 'Opsional. Judul dan isi bebas, misalnya Nama / Dari anime / Alasan.'));
-    const list = mk('div');
+// ---------- Form properti (dipakai panel detail gambar dan editor properti tier) ----------
+function buildPropsForm(current) {
+    const used = new Set([...Object.values(state.props).flat(), ...state.tiers.flatMap(t => t.props || [])].map(p => p.t).filter(Boolean));
+    titleList.replaceChildren(...[...used].map(t => { const o = mk('option'); o.value = t; return o; }));   // saran judul
+    const el = mk('div'), list = mk('div');
     const addRow = (p = { t: '', v: '' }) => {
         const r = mk('div', 'prow'), t = mk('input'), v = mk('textarea'), x = mk('button', 'x', '×');
         t.type = 'text'; t.value = p.t; t.placeholder = 'Judul'; t.setAttribute('list', 'ptitles'); t.maxLength = 60;
@@ -661,12 +603,99 @@ function openPropsEditor(title, current, onSave) {
     (current && current.length ? current : [{ t: '', v: '' }]).forEach(p => addRow(p));
     const add = mk('button', 'addprop', '+ Tambah properti');
     add.addEventListener('click', () => addRow().focus());
-    const btns = mk('div', 'mbtns'), cancel = mk('button', '', 'Batal'), save = mk('button', 'primary', 'Simpan');
-    btns.append(cancel, save);
-    box.append(list, add, btns);
+    el.append(list, add);
+    return {
+        el,
+        focus: () => { const f = list.querySelector('input'); if (f) f.focus(); },
+        get: () => cleanProps([...list.children].map(r => ({ t: r.querySelector('input').value, v: r.querySelector('textarea').value }))),
+    };
+}
+
+// ---------- Panel gambar: lihat DAN ubah properti di satu tempat ----------
+const PENCIL = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+function openDetail(id) {
+    hideTip();
+    const order = [...state.tiers.flatMap(t => t.items), ...state.pool];      // urutan seperti di layar
+    let i = Math.max(0, order.indexOf(id)), form = null;                      // form != null berarti sedang mengedit
+    const back = mk('div', 'mback'), box = mk('div', 'modal detail');
+    const wrap = mk('div', 'dimg'), img = mk('img');
+    const prev = mk('button', 'dnav prev', '‹'), next = mk('button', 'dnav next', '›');
+    wrap.append(img, prev, next);
+    const side = mk('div', 'dside'), head = mk('div', 'dhead'), where = mk('div', 'dwhere');
+    const pencil = mk('button', 'dpencil'), body = mk('div', 'dprops'), foot = mk('div', 'mbtns');
+    pencil.innerHTML = PENCIL;
+    pencil.title = 'Ubah properti';
+    head.append(where, pencil);
+    side.append(head, body, foot);
+    box.append(wrap, side);
     back.appendChild(box);
     document.body.appendChild(back);
 
+    function show() {
+        const cur = order[i], tier = state.tiers.find(t => t.items.includes(cur));
+        img.src = state.images[cur].url;
+        where.textContent = `${tier ? 'Tier ' + tier.name : 'Area gambar'} · ${i + 1}/${order.length}`;
+        prev.hidden = next.hidden = pencil.hidden = !!form;                    // saat mengedit, navigasi dikunci
+        body.replaceChildren();
+        foot.replaceChildren();
+        if (form) {
+            body.appendChild(form.el);
+            const c = mk('button', '', 'Batal'), s = mk('button', 'primary', 'Simpan');
+            c.addEventListener('click', () => { form = null; show(); });
+            s.addEventListener('click', saveEdit);
+            foot.append(c, s);
+            form.focus();
+        } else {
+            const ps = state.props[cur] || [];
+            if (!ps.length) body.appendChild(mk('div', 'dempty', 'Belum ada properti. Klik ikon pensil untuk menambah.'));
+            ps.forEach(p => { if (p.t) body.appendChild(mk('div', 'k', p.t)); body.appendChild(mk('div', 'v', p.v)); });
+            const x = mk('button', 'primary', 'Tutup');
+            x.addEventListener('click', end);
+            foot.append(x);
+        }
+    }
+    function saveEdit() {
+        const cur = order[i], nextProps = form.get();
+        form = null;
+        pushUndo();
+        if (nextProps.length) state.props[cur] = nextProps; else delete state.props[cur];
+        afterChange();                                                         // layar di belakang diperbarui, panel tetap terbuka
+        show();
+    }
+    const go = step => { i = (i + step + order.length) % order.length; show(); };
+    function end() { document.removeEventListener('keydown', onKey, true); back.remove(); }
+    function onKey(e) {
+        const k = e.key;
+        if (k === 'Escape') { e.preventDefault(); e.stopPropagation(); if (form) { form = null; show(); } else end(); }
+        else if (form && k === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.stopPropagation(); saveEdit(); }
+        else if (!form && (k === 'ArrowLeft' || k === 'ArrowRight')) { e.preventDefault(); e.stopPropagation(); go(k === 'ArrowLeft' ? -1 : 1); }
+    }
+    document.addEventListener('keydown', onKey, true);
+    back.addEventListener('mousedown', e => { if (e.target === back && !form) end(); });   // saat mengedit, tidak tertutup tak sengaja
+    prev.addEventListener('click', () => go(-1));
+    next.addEventListener('click', () => go(1));
+    pencil.addEventListener('click', () => { form = buildPropsForm(state.props[order[i]]); show(); });
+    show();
+    pencil.focus();
+}
+
+function openTierProps(tierId) {
+    const t = state.tiers.find(x => x.id === tierId);
+    openPropsEditor(`Properti tier "${t.name}"`, t.props, next => {
+        pushUndo();
+        state.tiers.find(x => x.id === tierId).props = next;      // cari ulang lewat id: undo mengganti objek tier
+        afterChange();
+    });
+}
+function openPropsEditor(title, current, onSave) {
+    hideTip();
+    const back = mk('div', 'mback'), box = mk('div', 'modal wide'), form = buildPropsForm(current);
+    box.append(mk('h3', '', title), mk('p', '', 'Opsional. Judul dan isi bebas, misalnya Nama / Dari anime / Alasan.'), form.el);
+    const btns = mk('div', 'mbtns'), cancel = mk('button', '', 'Batal'), save = mk('button', 'primary', 'Simpan');
+    btns.append(cancel, save);
+    box.appendChild(btns);
+    back.appendChild(box);
+    document.body.appendChild(back);
     function close() { document.removeEventListener('keydown', onKey, true); back.remove(); }
     function onKey(e) {
         if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
@@ -675,12 +704,8 @@ function openPropsEditor(title, current, onSave) {
     document.addEventListener('keydown', onKey, true);
     back.addEventListener('mousedown', e => { if (e.target === back) close(); });
     cancel.addEventListener('click', close);
-    save.addEventListener('click', () => {
-        const next = cleanProps([...list.children].map(r => ({ t: r.querySelector('input').value, v: r.querySelector('textarea').value })));
-        close();
-        onSave(next);
-    });
-    list.querySelector('input').focus();
+    save.addEventListener('click', () => { const next = form.get(); close(); onSave(next); });
+    form.focus();
 }
 
 // ---------- Pengingat backup (data hanya ada di browser ini) ----------

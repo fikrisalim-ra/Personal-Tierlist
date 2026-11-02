@@ -888,3 +888,59 @@ header {
 #backupInfo.warn {
     color: #ffcf5a;
 }
+
+/* ---- panel gambar: ikon pensil + mode ubah di tempat ---- */
+.dhead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.dhead .dwhere {
+    margin-bottom: 0;
+}
+
+.dpencil {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .08);
+    color: var(--text);
+    cursor: pointer;
+    flex: none;
+}
+
+.dpencil:hover {
+    background: var(--accent);
+}
+
+.dpencil[hidden],
+.dnav[hidden] {
+    display: none;
+}
+
+.dside .prow {
+    display: grid;
+    grid-template-columns: 1fr 30px;
+}
+
+.modal .dside .prow input[type=text] {
+    width: 100%;
+}
+
+.dside .prow textarea {
+    grid-column: 1 / -1;
+    grid-row: 2;
+}
+
+.dside .prow .x {
+    grid-column: 2;
+    grid-row: 1;
+}
