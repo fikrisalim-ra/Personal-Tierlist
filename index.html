@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tierlist Pribadi</title>
-  <link rel="stylesheet" href="style.css?v=4i1">
+  <link rel="stylesheet" href="style.css?v=4j1">
 </head>
 
 <body>
@@ -37,11 +37,15 @@
   <div id="tiers"></div>
   <div class="addrow"><button id="btnAddTier">+ Tambah tier</button><button id="btnFoldAll">Lipat semua</button><button
       id="btnUnfoldAll">Buka semua</button></div>
-  <div class="pool">
-    <div class="zone" id="pool" data-zone="pool"></div>
+  <div id="dock">
+    <button class="dock-bar" id="dockToggle"><span class="dt">Inventaris gambar</span><span id="dockCount"></span><span
+        class="chev" id="dockChev">▾</span></button>
+    <div class="dock-body">
+      <div class="zone" id="pool" data-zone="pool"></div>
+    </div>
   </div>
 
-  <script src="app.js?v=4i1"></script>
+  <script src="app.js?v=4j1"></script>
 </body>
 
 </html>

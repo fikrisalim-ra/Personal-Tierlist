@@ -944,3 +944,71 @@ header {
     grid-column: 2;
     grid-row: 1;
 }
+
+/* ---- inventaris gambar: menempel di bawah layar ---- */
+#dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    background: rgba(14, 21, 36, .94);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, .4);
+}
+
+.dock-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 24px;
+    border: 0;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.dock-bar:hover {
+    background: rgba(255, 255, 255, .04);
+}
+
+.dock-bar .dt {
+    font-weight: 600;
+}
+
+.dock-bar #dockCount {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.dock-bar .chev {
+    margin-left: auto;
+    color: var(--muted);
+}
+
+.dock-body {
+    max-height: min(38vh, 280px);
+    overflow-y: auto;
+    padding: 0 24px 14px;
+}
+
+#dock.closed .dock-body {
+    display: none;
+}
+
+#pool {
+    min-height: calc(var(--size) + 12px);
+    border-radius: 10px;
+}
+
+#pool:empty::before {
+    content: "Tarik gambar dari komputermu ke sini (bisa banyak sekaligus)";
+    padding: 8px;
+    color: var(--muted);
+}

@@ -63,7 +63,7 @@ const askText = (title, message, value) => modal({ title, message, input: value,
 const fileSafe = n => (n || '').replace(/[\\\/:*?"<>|\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'tierlist';
 
 // Versi file ini (untuk memastikan browser memuat file terbaru, bukan cache)
-const APP_VERSION = '4i-1';
+const APP_VERSION = '4j-1';
 console.log('Tierlist app.js versi', APP_VERSION);
 function showFatal(msg) {
     const el = document.getElementById('status');
@@ -310,10 +310,21 @@ document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); searchEl.focus(); searchEl.select(); }
 });
 document.getElementById('btnPng').addEventListener('click', exportPNG);
-document.getElementById('backupInfo').addEventListener('click', async () => {
-    if (!db) return dbNotReady();
-    if (await askConfirm('Export tierlist?', `"${curName()}" akan diunduh sebagai ${fileSafe(curName())}.json.`, 'Export')) exportJSON();
-});
+document.getElementById('backupInfo').addEventListener('click', confirmAndExport);
+// ---------- Inventaris gambar: menempel di bawah layar, bisa dibuka-tutup ----------
+const dock = document.getElementById('dock');
+function setDock(open) {
+    dock.classList.toggle('closed', !open);
+    document.getElementById('dockChev').textContent = open ? '▾' : '▴';
+    try { localStorage.setItem('tierlist-dock', open ? 'open' : 'closed'); } catch (e) { /* tidak masalah */ }
+}
+document.getElementById('dockToggle').addEventListener('click', () => setDock(dock.classList.contains('closed')));
+document.getElementById('dockToggle').addEventListener('dragenter', () => { if (!dragTierId && dock.classList.contains('closed')) setDock(true); });   // menyeret ke bar yang tertutup = otomatis terbuka
+let dockStart = true;
+try { dockStart = localStorage.getItem('tierlist-dock') !== 'closed'; } catch (e) { /* tidak masalah */ }
+setDock(dockStart);
+if (window.ResizeObserver) new ResizeObserver(() => { document.body.style.paddingBottom = (dock.offsetHeight + 24) + 'px'; }).observe(dock);   // isi halaman tidak tertutup inventaris
+else document.body.style.paddingBottom = '320px';
 document.getElementById('btnAddTier').addEventListener('click', () => addTier());
 document.getElementById('btnUndo').addEventListener('click', undo);
 document.getElementById('btnRedo').addEventListener('click', redo);
@@ -328,7 +339,7 @@ document.addEventListener('keydown', e => {
     if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
     else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
 });
-document.getElementById('btnExport').addEventListener('click', exportJSON);
+document.getElementById('btnExport').addEventListener('click', confirmAndExport);
 document.getElementById('btnImport').addEventListener('click', () => document.getElementById('importFile').click());
 document.getElementById('importFile').addEventListener('change', e => {
     const f = e.target.files[0];
@@ -873,6 +884,11 @@ function renderBackupInfo() {
     el.classList.toggle('warn', warn);
 }
 
+async function confirmAndExport() {
+    if (!db) return dbNotReady();
+    if (await askConfirm('Export tierlist?', `"${curName()}" akan diunduh sebagai ${fileSafe(curName())}.json.`, 'Export')) exportJSON();
+}
+
 // ---------- Pencarian (menyorot gambar yang properti-nya cocok) ----------
 let searchQ = '';
 let hitCursor = -1;
@@ -1090,6 +1106,7 @@ function render() {
     });
     syncItems(document.getElementById('pool'), state.pool);
     itemEls.forEach((el, id) => { if (!(id in state.images)) { el.remove(); itemEls.delete(id); } });   // gambar yang sudah dibuang
+    document.getElementById('dockCount').textContent = state.pool.length ? `(${state.pool.length})` : '';
     applySearch();
 }
 
