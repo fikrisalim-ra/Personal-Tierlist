@@ -5,49 +5,87 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Personal Tierlist</title>
-  <link rel="stylesheet" href="theme.css?v=5a1">
-  <link rel="stylesheet" href="style.css?v=5a1">
+  <meta name="theme-color" content="#070b14">
+  <link rel="icon" type="image/png" href="Personal%20Tierlist%20favicon-02.png">
+  <link rel="stylesheet" href="theme.css?v=9">
+  <link rel="stylesheet" href="style.css?v=9">
 </head>
 
 <body>
-  <header>
-    <h1><a href="index.html" title="Kembali ke halaman depan">Personal Tierlist</a></h1>
-    <div class="lists">
-      <select id="listSelect" title="Pilih tierlist"></select>
-      <button id="btnNewList">+ Baru</button>
-      <button id="btnRenameList">Ganti nama</button>
-      <button id="btnDeleteList">Hapus</button>
+  <header id="appHeader">
+    <h1>
+      <a href="index.html" title="Kembali ke halaman depan">
+        <img src="Personal%20Tierlist%20favicon-02.png" alt="" class="brand-logo">
+        <span>Personal Tierlist</span>
+      </a>
+    </h1>
+
+    <div id="viewOnlyBanner" class="vo-banner" hidden>
+      <span class="vo-badge">Mode Lihat Saja</span>
+      <span id="voTitle" class="vo-title"></span>
+      <a href="app.html" class="vo-btn">Buka tierlist sendiri</a>
     </div>
+
+    <div class="lists" id="listsBar">
+      <select id="listSelect" title="Pilih tierlist"></select>
+      <button id="btnNewList" type="button">+ Baru</button>
+      <button id="btnRenameList" type="button">Ganti nama</button>
+      <button id="btnDeleteList" type="button">Hapus</button>
+    </div>
+
     <input id="search" type="search" placeholder="Cari properti…  (Ctrl+K)" autocomplete="off">
     <span id="searchInfo"></span>
+
+    <div class="tier-nav-btns">
+      <button id="btnAddTierTop" type="button" title="Tambah baris tier baru">+ Tier</button>
+      <button id="btnFoldAll" type="button" title="Lipat semua baris tier">Lipat semua</button>
+      <button id="btnUnfoldAll" type="button" title="Buka semua baris tier">Buka semua</button>
+    </div>
+
     <span id="backupInfo"></span>
     <span id="status"></span>
     <span id="usage"></span>
+
     <div class="actions">
-      <button id="btnUndo" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
-      <button id="btnRedo" title="Redo (Ctrl+Y)" disabled>↷ Redo</button>
-      <button id="btnFit" title="Cara gambar ditampilkan di kotak">Gambar: Potong</button>
-      <button id="btnPng" title="Simpan tierlist sebagai gambar PNG untuk dibagikan">Export PNG</button>
-      <button id="btnExport" title="Simpan semua (gambar + susunan) jadi satu file JSON">Export</button>
-      <button id="btnImport" title="Ganti tierlist dengan isi file JSON">Import</button>
+      <button id="btnUndo" type="button" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
+      <button id="btnRedo" type="button" title="Redo (Ctrl+Y)" disabled>↷ Redo</button>
+      <button id="btnFit" type="button" title="Atur ukuran, rasio, dan tampilan gambar">Tampilan gambar</button>
+      <button id="btnPng" type="button" title="Simpan tierlist sebagai gambar PNG untuk dibagikan">Export PNG</button>
+      <button id="btnExport" type="button" title="Simpan semua (gambar + susunan) jadi satu file JSON">Export</button>
+      <button id="btnImport" type="button" title="Muat file JSON sebagai tierlist baru">Import</button>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
     </div>
   </header>
+
   <textarea id="listDesc" rows="1" maxlength="2000"
     placeholder="Deskripsi tierlist (opsional): tulis catatan, aturan penilaian, atau apa saja…"></textarea>
+
   <div id="tiers"></div>
-  <div class="addrow"><button id="btnAddTier">+ Tambah tier</button><button id="btnFoldAll">Lipat semua</button><button
-      id="btnUnfoldAll">Buka semua</button></div>
+
+  <div class="addrow" id="bottomAddRow">
+    <button id="btnAddTier" type="button">+ Tambah tier</button>
+  </div>
+
   <div id="dock">
     <div id="dockGrip" title="Tarik untuk mengubah tinggi inventaris"><span></span></div>
-    <button class="dock-bar" id="dockToggle"><span class="dt">Inventaris gambar</span><span id="dockCount"></span><span
-        class="chev" id="dockChev">▾</span></button>
-    <div class="dock-body">
+    <button class="dock-bar" id="dockToggle" type="button">
+      <span class="dt">Inventaris gambar</span>
+      <span id="dockCount"></span>
+      <span class="dock-tip">Klik gambar untuk detail / crop / slideshow · Tahan Shift saat drop ke gambar lain untuk
+        gabung slideshow</span>
+      <span class="chev" id="dockChev">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </span>
+    </button>
+    <div class="dock-body" id="dockBody">
       <div class="zone" id="pool" data-zone="pool"></div>
     </div>
   </div>
 
-  <script src="app.js?v=5a1"></script>
+  <script src="app.js?v=9"></script>
 </body>
 
 </html>

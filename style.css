@@ -1,1045 +1,1847 @@
-  /* Warna ada di theme.css. Di sini hanya variabel khusus aplikasi. */
-  :root {
-      --size: 88px;
-      --fit: cover;
-  }
-
-  * {
-      box-sizing: border-box;
-  }
-
-  body {
-      margin: 0;
-      padding: 24px;
-      background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, sans-serif;
-  }
-
-  header {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 16px;
-  }
-
-  .lists {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-  }
-
-  .lists select {
-      background: var(--panel);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 5px 8px;
-      font: inherit;
-      font-size: 13px;
-      max-width: 200px;
-  }
-
-  h1 {
-      font-size: 20px;
-      margin: 0;
-  }
-
-  #status,
-  #usage {
-      font-size: 13px;
-      color: var(--muted);
-  }
-
-  .actions {
-      margin-left: auto;
-      display: flex;
-      gap: 8px;
-  }
-
-  .actions button,
-  .addrow button,
-  .lists button {
-      background: var(--panel);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 6px 12px;
-      font: inherit;
-      font-size: 13px;
-      cursor: pointer;
-  }
-
-  .actions button:hover,
-  .addrow button:hover,
-  .lists button:hover {
-      border-color: var(--muted);
-  }
-
-  .addrow {
-      margin-top: 8px;
-      display: flex;
-      gap: 8px;
-  }
-
-  .tier {
-      display: flex;
-      margin-bottom: 6px;
-      background: var(--panel);
-      min-height: calc(var(--size) + 12px);
-  }
-
-  .label {
-      width: 110px;
-      flex: none;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: 6px;
-      color: #111;
-      font-weight: 700;
-      text-align: center;
-  }
-
-  .label .name {
-      width: 100%;
-      outline: none;
-      word-break: break-word;
-  }
-
-  .label input[type=color] {
-      width: 28px;
-      height: 20px;
-      padding: 0;
-      border: 0;
-      background: none;
-      cursor: pointer;
-  }
-
-  .zone {
-      flex: 1;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      padding: 6px;
-      align-content: flex-start;
-  }
-
-  .zone.over {
-      outline: 2px dashed var(--muted);
-      outline-offset: -4px;
-  }
-
-  .pool {
-      margin-top: 20px;
-      background: var(--panel);
-      min-height: 140px;
-      display: flex;
-  }
-
-  .pool .zone:empty::before {
-      content: "Tarik gambar dari komputermu ke sini (bisa banyak sekaligus)";
-      color: var(--muted);
-      padding: 8px;
-  }
-
-  .item {
-      position: relative;
-      width: var(--size);
-      height: var(--size);
-      cursor: grab;
-      background: rgba(0, 0, 0, .25);
-      border-radius: 4px;
-  }
-
-  .item img {
-      width: 100%;
-      height: 100%;
-      object-fit: var(--fit);
-      display: block;
-      border-radius: 4px;
-  }
-
-  .item.dragging {
-      opacity: .4;
-  }
-
-  .del {
-      position: absolute;
-      top: 2px;
-      right: 2px;
-      width: 22px;
-      height: 22px;
-      border: 0;
-      border-radius: 50%;
-      background: rgba(0, 0, 0, .75);
-      color: #fff;
-      cursor: pointer;
-      display: none;
-      line-height: 1;
-  }
-
-  .item:hover .del {
-      display: block;
-  }
-
-  .label {
-      position: relative;
-  }
-
-  .tdel {
-      position: absolute;
-      top: 2px;
-      right: 2px;
-      width: 20px;
-      height: 20px;
-      border: 0;
-      border-radius: 50%;
-      background: rgba(0, 0, 0, .35);
-      color: #fff;
-      cursor: pointer;
-      display: none;
-      line-height: 1;
-      font-size: 14px;
-  }
-
-  .tier:hover .tdel {
-      display: block;
-  }
-
-  .thandle {
-      position: absolute;
-      top: 2px;
-      left: 4px;
-      cursor: grab;
-      font-size: 16px;
-      line-height: 1;
-      color: rgba(0, 0, 0, .55);
-      display: none;
-      user-select: none;
-  }
-
-  .tier:hover .thandle {
-      display: block;
-  }
-
-  .tier.moving {
-      opacity: .4;
-  }
-
-  .tmarker {
-      height: 4px;
-      background: #fff;
-      border-radius: 2px;
-      margin-bottom: 6px;
-      pointer-events: none;
-  }
-
-  .marker {
-      width: 4px;
-      height: var(--size);
-      background: #fff;
-      border-radius: 2px;
-      pointer-events: none;
-      flex: none;
-  }
-
-  .actions button:disabled {
-      opacity: .4;
-      cursor: default;
-  }
-
-  .tgear {
-      position: absolute;
-      top: 2px;
-      right: 4px;
-      width: 22px;
-      height: 22px;
-      border: 0;
-      border-radius: 50%;
-      background: rgba(0, 0, 0, .3);
-      color: #fff;
-      cursor: pointer;
-      display: none;
-      font-size: 13px;
-      line-height: 1;
-  }
-
-  .tier:hover .tgear {
-      display: block;
-  }
-
-  #tpop {
-      position: fixed;
-      z-index: 50;
-      width: 216px;
-      padding: 10px;
-      display: none;
-      background: var(--panel2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
-  }
-
-  #tpop .sw {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 6px;
-      margin-bottom: 10px;
-  }
-
-  #tpop .sw button {
-      height: 26px;
-      padding: 0;
-      border: 2px solid transparent;
-      border-radius: 50%;
-      cursor: pointer;
-  }
-
-  #tpop .sw button.on {
-      border-color: #fff;
-  }
-
-  #tpop .row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 8px;
-      font-size: 12px;
-      color: var(--muted);
-  }
-
-  #tpop input[type=color] {
-      width: 36px;
-      height: 24px;
-      padding: 0;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      background: none;
-      cursor: pointer;
-  }
-
-  #tpop .act {
-      display: block;
-      width: 100%;
-      text-align: left;
-      padding: 6px 8px;
-      border: 0;
-      border-radius: 6px;
-      background: none;
-      color: var(--text);
-      font: inherit;
-      font-size: 13px;
-      cursor: pointer;
-  }
-
-  #tpop .act:hover {
-      background: rgba(255, 255, 255, .08);
-  }
-
-  #tpop .act.danger {
-      color: #ff7b72;
-  }
-
-  .tfold {
-      position: absolute;
-      bottom: 2px;
-      right: 4px;
-      border: 0;
-      background: none;
-      cursor: pointer;
-      color: rgba(0, 0, 0, .6);
-      font-size: 14px;
-      line-height: 1;
-      display: none;
-  }
-
-  .tier:hover .tfold,
-  .tier.collapsed .tfold {
-      display: block;
-  }
-
-  .count {
-      font-size: 12px;
-      font-weight: 600;
-      opacity: .7;
-      display: none;
-  }
-
-  .tier.collapsed {
-      min-height: 0;
-  }
-
-  .tier.collapsed .zone {
-      display: none;
-  }
-
-  .tier.collapsed .label {
-      width: auto;
-      flex: 1;
-      flex-direction: row;
-      justify-content: flex-start;
-      padding: 4px 36px 4px 24px;
-      gap: 12px;
-  }
-
-  .tier.collapsed .label .name {
-      width: auto;
-      min-width: 40px;
-  }
-
-  .tier.collapsed .count {
-      display: block;
-  }
-
-  /* tier terlipat: tombol buka = area lebar di tengah baris */
-  .tier.collapsed .tfold {
-      position: static;
-      flex: 1;
-      align-self: stretch;
-      font-size: 16px;
-      background: rgba(0, 0, 0, .06);
-      border-radius: 4px;
-  }
-
-  .tier.collapsed .tfold:hover {
-      background: rgba(0, 0, 0, .16);
-  }
-
-  .mback {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(4, 8, 20, .7);
-  }
-
-  .modal {
-      width: min(420px, 92vw);
-      padding: 18px;
-      background: var(--panel2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      box-shadow: 0 16px 48px rgba(0, 0, 0, .55);
-  }
-
-  .modal h3 {
-      margin: 0 0 8px;
-      font-size: 16px;
-  }
-
-  .modal p {
-      margin: 0 0 12px;
-      font-size: 13px;
-      line-height: 1.5;
-      color: var(--muted);
-      white-space: pre-wrap;
-  }
-
-  .modal input[type=text] {
-      width: 100%;
-      margin-bottom: 12px;
-      padding: 8px 10px;
-      background: var(--bg);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font: inherit;
-      font-size: 14px;
-  }
-
-  .modal input[type=text]:focus {
-      outline: 2px solid var(--accent);
-      outline-offset: -1px;
-  }
-
-  .mbtns {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-  }
-
-  .mbtns button {
-      padding: 7px 14px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--panel);
-      color: var(--text);
-      font: inherit;
-      font-size: 13px;
-      cursor: pointer;
-  }
-
-  .mbtns button.primary {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-  }
-
-  .mbtns button.danger {
-      background: #d6453d;
-      border-color: #d6453d;
-      color: #fff;
-  }
-
-  .mbtns button:focus-visible {
-      outline: 2px solid #fff;
-      outline-offset: 2px;
-  }
-
-  /* ---- tampilan: kartu membulat, label monospace, panel kaca ---- */
-  body {
-      background: radial-gradient(1100px 480px at 50% -160px, rgba(77, 141, 255, .14), transparent 70%), var(--bg);
-  }
-
-  h1 {
-      letter-spacing: -.01em;
-  }
-
-  #status,
-  #usage,
-  .count {
-      font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
-      font-size: 12px;
-  }
-
-  .tier,
-  .pool {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
-  }
-
-  .tier {
-      margin-bottom: 8px;
-  }
-
-  .actions button,
-  .addrow button,
-  .lists button,
-  .lists select {
-      border-radius: 8px;
-  }
-
-  .item {
-      border-radius: 6px;
-  }
-
-  .item:hover {
-      outline: 2px solid var(--accent);
-      outline-offset: 1px;
-  }
-
-  #tpop,
-  .modal {
-      background: rgba(19, 28, 48, .86);
-      backdrop-filter: blur(14px);
-      border-radius: 14px;
-  }
-
-  .mback {
-      backdrop-filter: blur(3px);
-  }
-
-  /* ---- properti gambar ---- */
-  .item.has-props::after {
-      content: '';
-      position: absolute;
-      left: 3px;
-      bottom: 3px;
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--accent);
-      box-shadow: 0 0 0 2px rgba(0, 0, 0, .55);
-      pointer-events: none;
-  }
-
-  .tip {
-      position: fixed;
-      z-index: 60;
-      display: none;
-      max-width: 320px;
-      padding: 10px 12px;
-      pointer-events: none;
-      background: rgba(7, 11, 22, .92);
-      border: 1px solid var(--accent);
-      border-radius: 10px;
-      box-shadow: 0 8px 28px rgba(0, 0, 0, .55);
-      backdrop-filter: blur(10px);
-  }
-
-  .tip .k {
-      margin-top: 8px;
-      font-size: 11px;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      color: var(--accent);
-  }
-
-  .tip .k:first-child {
-      margin-top: 0;
-  }
-
-  .tip .v {
-      font-size: 13px;
-      line-height: 1.45;
-      white-space: pre-wrap;
-      word-break: break-word;
-  }
-
-  .modal.wide {
-      width: min(560px, 94vw);
-  }
-
-  .prow {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 8px;
-      align-items: flex-start;
-  }
-
-  .modal .prow input[type=text] {
-      width: 34%;
-      margin: 0;
-      padding: 7px 9px;
-      font-size: 13px;
-  }
-
-  .prow textarea {
-      flex: 1;
-      min-height: 36px;
-      padding: 7px 9px;
-      resize: vertical;
-      background: var(--bg);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font: inherit;
-      font-size: 13px;
-  }
-
-  .prow input:focus,
-  .prow textarea:focus {
-      outline: 2px solid var(--accent);
-      outline-offset: -1px;
-  }
-
-  .prow .x {
-      width: 30px;
-      height: 34px;
-      padding: 0;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: none;
-      color: var(--muted);
-      cursor: pointer;
-  }
-
-  .prow .x:hover {
-      color: #ff7b72;
-  }
-
-  .addprop {
-      margin: 2px 0 14px;
-      padding: 6px 12px;
-      border: 1px dashed var(--border);
-      border-radius: 8px;
-      background: none;
-      color: var(--muted);
-      font: inherit;
-      font-size: 13px;
-      cursor: pointer;
-  }
-
-  .addprop:hover {
-      color: var(--text);
-      border-color: var(--muted);
-  }
-
-  /* ---- deskripsi tierlist & properti tier ---- */
-  #listDesc {
-      display: block;
-      width: 100%;
-      margin-bottom: 12px;
-      padding: 10px 12px;
-      resize: none;
-      overflow-y: auto;
-      background: var(--panel);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      font: inherit;
-      font-size: 13px;
-      line-height: 1.5;
-  }
-
-  #listDesc::placeholder {
-      color: var(--muted);
-  }
-
-  #listDesc:focus {
-      outline: 2px solid var(--accent);
-      outline-offset: -1px;
-  }
-
-  /* ---- ikon properti tier: di sebelah gerigi, hanya muncul saat hover ---- */
-  .tinfo {
-      position: absolute;
-      top: 2px;
-      right: 30px;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      width: 22px;
-      height: 22px;
-      padding: 0;
-      border: 0;
-      border-radius: 50%;
-      background: rgba(0, 0, 0, .3);
-      color: #fff;
-      cursor: pointer;
-  }
-
-  .tier:hover .label.has-info .tinfo {
-      display: flex;
-  }
-
-  /* hanya ada kalau tier punya properti */
-  .tier.collapsed .label {
-      padding-right: 64px;
-  }
-
-  /* ---- header menempel di atas supaya pencarian selalu terjangkau di tierlist panjang ---- */
-  header {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      margin: 0 -24px 14px;
-      padding: 10px 24px;
-      background: rgba(7, 11, 20, .82);
-      backdrop-filter: blur(12px);
-  }
-
-  #search {
-      width: 190px;
-      padding: 6px 10px;
-      background: var(--panel);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font: inherit;
-      font-size: 13px;
-  }
-
-  #search:focus {
-      outline: 2px solid var(--accent);
-      outline-offset: -1px;
-  }
-
-  #searchInfo {
-      font-family: ui-monospace, Consolas, monospace;
-      font-size: 12px;
-      color: var(--muted);
-  }
-
-  .item.dim {
-      opacity: .2;
-  }
-
-  .item.hit {
-      outline: 2px solid #ffcf5a;
-      outline-offset: 1px;
-  }
-
-  .tier.collapsed.hit .label {
-      box-shadow: inset 0 0 0 2px #ffcf5a;
-  }
-
-  /* ---- panel detail gambar ---- */
+/* Warna ada di theme.css. Di sini variabel khusus aplikasi. */
+:root {
+  --tile-w: 88px;
+  --tile-h: 88px;
+  --fit: cover;
+}
+
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #293b5f transparent;
+}
+
+/* Custom scrollbar biru gelap untuk semua elemen termasuk #listDesc, modal, dan dock */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #293b5f;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #3d568a;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+html {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: 0 24px 280px;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(1100px 480px at 50% -150px, rgba(77, 141, 255, 0.16), transparent 70%),
+    radial-gradient(800px 500px at 12% 420px, rgba(45, 95, 215, 0.07), transparent 72%),
+    radial-gradient(800px 500px at 88% 760px, rgba(77, 155, 255, 0.06), transparent 72%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: system-ui, sans-serif;
+  transition: padding-bottom 0.34s var(--ease-out);
+}
+
+body.resizing-dock {
+  user-select: none;
+  cursor: ns-resize;
+  transition: none;
+}
+
+/* ---- Header Menempel di Atas ---- */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 -24px 14px;
+  padding: 10px 24px;
+  background: rgba(7, 11, 20, 0.85);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+
+h1 {
+  font-size: 20px;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+h1 a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.brand-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  object-fit: contain;
+}
+
+/* Banner Mode Lihat Saja */
+.vo-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+}
+
+.vo-banner[hidden] {
+  display: none !important;
+}
+
+.vo-badge {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(77, 141, 255, 0.16);
+  color: var(--accent);
+}
+
+.vo-title {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.vo-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--panel-inner);
+  color: var(--text);
+  font-size: 12px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.vo-btn:hover {
+  background: #253558;
+}
+
+.lists,
+.tier-nav-btns,
+.actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.actions {
+  margin-left: auto;
+  gap: 8px;
+}
+
+.lists select,
+.actions button,
+.tier-nav-btns button,
+.addrow button,
+.lists button {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-top-color: var(--border-light);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.16s, border-color 0.16s, transform 0.14s var(--ease-spring), box-shadow 0.16s;
+}
+
+.lists select {
+  padding: 5px 8px;
+  max-width: 200px;
+}
+
+.actions button:hover:not(:disabled),
+.tier-nav-btns button:hover:not(:disabled),
+.addrow button:hover:not(:disabled),
+.lists button:hover:not(:disabled),
+.lists select:hover {
+  background: var(--panel-hover);
+  border-color: var(--accent);
+  box-shadow: 0 3px 12px rgba(77, 141, 255, 0.16);
+}
+
+.actions button:active:not(:disabled),
+.tier-nav-btns button:active:not(:disabled),
+.addrow button:active:not(:disabled),
+.lists button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#search {
+  width: 190px;
+  padding: 6px 10px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  transition: border-color 0.16s, box-shadow 0.16s, width 0.2s var(--ease-out);
+}
+
+#search:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(77, 141, 255, 0.25);
+}
+
+#status,
+#usage,
+#searchInfo,
+#backupInfo {
+  font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+#backupInfo {
+  cursor: pointer;
+}
+
+#backupInfo.warn {
+  color: var(--warn);
+}
+
+/* ---- Deskripsi Tierlist ---- */
+#listDesc {
+  display: block;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  resize: none;
+  overflow-y: auto;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  transition: border-color 0.16s, box-shadow 0.16s;
+}
+
+#listDesc::placeholder {
+  color: var(--muted);
+}
+
+#listDesc:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(77, 141, 255, 0.22);
+}
+
+/* ---- Baris Tier (Warna Solid Tanpa Gradasi, Font Lama, Highlight Halus) ---- */
+.tier {
+  display: flex;
+  margin-bottom: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top-color: var(--border-light);
+  border-radius: 12px;
+  min-height: calc(var(--tile-h) + 12px);
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.24);
+  transition: border-color 0.18s, box-shadow 0.18s, opacity 0.18s;
+  animation: tierFadeIn 0.24s var(--ease-out);
+}
+
+.tier:hover {
+  border-color: rgba(77, 141, 255, 0.35);
+}
+
+@keyframes tierFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tier.moving {
+  opacity: 0.4;
+}
+
+.label {
+  position: relative;
+  width: 110px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px;
+  color: #111;
+  font-weight: 700;
+  text-align: center;
+}
+
+.label .name {
+  width: 100%;
+  outline: none;
+  word-break: break-word;
+  border-radius: 4px;
+}
+
+.label .name:focus {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Titik penanda tier punya deskripsi */
+.label.has-info::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.thandle {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  cursor: grab;
+  font-size: 16px;
+  line-height: 1;
+  color: inherit;
+  opacity: 0;
+  user-select: none;
+  transition: opacity 0.15s;
+}
+
+.tier:hover .thandle {
+  opacity: 0.6;
+}
+
+.thandle:hover {
+  opacity: 1 !important;
+}
+
+.tgear {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.34);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  font-size: 13px;
+  line-height: 1;
+  transition: opacity 0.15s, background 0.15s, transform 0.16s var(--ease-spring);
+}
+
+.tier:hover .tgear {
+  opacity: 1;
+}
+
+.tgear:hover {
+  background: rgba(0, 0, 0, 0.6);
+  transform: scale(1.12);
+}
+
+.tfold {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.tier:hover .tfold,
+.tier.collapsed .tfold {
+  opacity: 0.72;
+}
+
+.tfold:hover {
+  opacity: 1 !important;
+}
+
+/* Jumlah gambar saat tier dilipat: kontras jelas dengan warna teks label */
+.count {
+  font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: inherit;
+  background: rgba(0, 0, 0, 0.15);
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: none;
+}
+
+.tier.collapsed {
+  min-height: 0;
+}
+
+.tier.collapsed .zone {
+  display: none;
+}
+
+.tier.collapsed .label {
+  width: auto;
+  flex: 1;
+  flex-direction: row;
+  justify-content: flex-start;
+  padding: 5px 36px 5px 24px;
+  gap: 12px;
+}
+
+.tier.collapsed .label .name {
+  width: auto;
+  min-width: 40px;
+}
+
+.tier.collapsed .count {
+  display: inline-block;
+}
+
+.tier.collapsed .tfold {
+  position: static;
+  flex: 1;
+  align-self: stretch;
+  font-size: 16px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+  opacity: 1;
+}
+
+.tier.collapsed .tfold:hover {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+/* ---- Zona & Item Gambar (Dengan Animasi Pop & Highlight Glow yang Dikembalikan!) ---- */
+.zone {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px;
+  align-content: flex-start;
+  transition: background 0.18s, outline-color 0.18s;
+}
+
+.zone.over {
+  background: rgba(77, 141, 255, 0.07);
+  outline: 2px dashed var(--accent);
+  outline-offset: -4px;
+}
+
+.item {
+  position: relative;
+  width: var(--tile-w);
+  height: var(--tile-h);
+  cursor: grab;
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: transform 0.22s var(--ease-spring), box-shadow 0.2s var(--ease-out), opacity 0.18s;
+}
+
+.item img {
+  width: 100%;
+  height: 100%;
+  object-fit: var(--fit);
+  display: block;
+  border-radius: 6px;
+  pointer-events: none;
+  transition: opacity 0.22s var(--ease-out);
+}
+
+.item img.slide-fade {
+  opacity: 0.35;
+}
+
+/* Highlight hover gambar yang terasa hidup & glow biru */
+.item:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.52), 0 0 0 2px var(--accent), 0 0 14px var(--accent-glow);
+  z-index: 2;
+}
+
+.item:active {
+  cursor: grabbing;
+  transform: scale(0.97);
+}
+
+.item.dragging {
+  opacity: 0.32;
+  transform: scale(0.92);
+}
+
+/* Highlight saat tahan Shift untuk gabung gambar jadi 1 slideshow */
+.item.merge-target {
+  box-shadow: 0 0 0 3px var(--success), 0 0 18px rgba(74, 222, 128, 0.55) !important;
+  transform: scale(1.06);
+  z-index: 3;
+}
+
+/* Animasi nge-pop waktu gambar ditaruh di tierlist */
+.item.just-dropped {
+  animation: itemPop 0.36s var(--ease-spring);
+}
+
+@keyframes itemPop {
+  0% {
+    transform: scale(0.74);
+  }
+
+  70% {
+    transform: scale(1.08);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Indikator titik kalau punya properti */
+.item.has-props::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent), 0 0 0 2px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+}
+
+/* Badge jumlah gambar jika 1 item berisi slideshow (2+ gambar) */
+.slide-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(7, 11, 20, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+/* Label judul opsional di bagian bawah gambar */
+.item-cap {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 5px 3px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.55) 65%, transparent 100%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  pointer-events: none;
+}
+
+body.show-item-labels .item.has-props .item-cap {
+  display: block;
+}
+
+body.show-item-labels .item.has-props::after {
+  display: none;
+}
+
+.del {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(7, 11, 20, 0.82);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.8);
+  line-height: 1;
+  transition: opacity 0.15s, background 0.15s, transform 0.18s var(--ease-spring);
+}
+
+.item:hover .del {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.del:hover {
+  background: var(--danger);
+  transform: scale(1.14) !important;
+}
+
+/* Penanda posisi drop dengan glow biru */
+.tmarker {
+  height: 4px;
+  background: var(--accent);
+  border-radius: 999px;
+  box-shadow: 0 0 12px var(--accent);
+  margin-bottom: 8px;
+  pointer-events: none;
+}
+
+.marker {
+  width: 4px;
+  height: var(--tile-h);
+  background: var(--accent);
+  border-radius: 999px;
+  box-shadow: 0 0 12px var(--accent);
+  pointer-events: none;
+  flex: none;
+}
+
+.item.dim {
+  opacity: 0.18;
+  filter: grayscale(0.5);
+}
+
+.item.hit {
+  outline: 2px solid var(--warn);
+  outline-offset: 2px;
+  box-shadow: 0 0 16px rgba(255, 207, 90, 0.55);
+}
+
+.tier.collapsed.hit .label {
+  box-shadow: inset 0 0 0 2px var(--warn);
+}
+
+.addrow {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+/* ---- Inventaris Gambar (#dock) ---- */
+#dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  background: rgba(12, 18, 32, 0.94);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.45);
+}
+
+#dockGrip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 12px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+#dockGrip span {
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.15s, width 0.15s, box-shadow 0.15s;
+}
+
+#dockGrip:hover span,
+#dock.resizing #dockGrip span {
+  background: var(--accent);
+  width: 60px;
+  box-shadow: 0 0 10px var(--accent);
+}
+
+.dock-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 24px 9px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dock-bar:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dock-bar .dt {
+  font-weight: 600;
+}
+
+.dock-bar #dockCount {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.dock-tip {
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: 6px;
+}
+
+.dock-bar .chev {
+  margin-left: auto;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.34s var(--ease-spring);
+}
+
+#dock.closed .dock-bar .chev {
+  transform: rotate(180deg);
+}
+
+.dock-body {
+  height: var(--dock-h, 220px);
+  overflow-y: auto;
+  padding: 0 24px;
+  opacity: 1;
+  transition: height 0.34s var(--ease-out), opacity 0.25s var(--ease-out);
+}
+
+#dock.closed .dock-body {
+  height: 0 !important;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#dock.resizing .dock-body {
+  transition: none !important;
+}
+
+#pool {
+  min-height: calc(var(--tile-h) + 12px);
+  padding: 6px 6px 14px;
+  border-radius: 10px;
+}
+
+#pool:empty::before {
+  content: "Tarik gambar dari komputermu ke sini (bisa banyak sekaligus)";
+  padding: 8px;
+  color: var(--muted);
+}
+
+/* ---- Tooltip & Pop-up (2-Layer Dark Blue + Referensi Screenshot) ---- */
+.tip {
+  position: fixed;
+  z-index: 60;
+  display: none;
+  min-width: 210px;
+  max-width: 340px;
+  padding: 10px;
+  pointer-events: none;
+  background: rgba(18, 27, 46, 0.96);
+  border: 1px solid var(--border);
+  border-top-color: var(--border-light);
+  border-radius: 16px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6), 0 0 18px rgba(77, 141, 255, 0.12);
+  backdrop-filter: blur(12px);
+  animation: popFade 0.15s var(--ease-out);
+}
+
+.tip-head {
+  text-align: center;
+  padding: 2px 6px 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tip-inner {
+  padding: 10px 12px;
+  background: var(--panel-inner);
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
+}
+
+.tip .k {
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6bc5ff;
+}
+
+.tip .k:first-child {
+  margin-top: 0;
+}
+
+.tip .v {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@keyframes popFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ---- Modal Backdrop & Box ---- */
+.mback {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(4, 8, 18, 0.74);
+  backdrop-filter: blur(5px);
+  animation: mbackIn 0.2s var(--ease-out) both;
+}
+
+.mback.closing {
+  animation: mbackOut 0.16s var(--ease-out) both;
+  pointer-events: none;
+}
+
+@keyframes mbackIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mbackOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+.modal {
+  width: min(430px, 92vw);
+  max-height: 92vh;
+  padding: 18px;
+  background: rgba(18, 27, 46, 0.96);
+  border: 1px solid var(--border);
+  border-top-color: var(--border-light);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 0 28px rgba(77, 141, 255, 0.1);
+  backdrop-filter: blur(16px);
+  overflow-y: auto;
+  animation: modalIn 0.24s var(--ease-spring) both;
+}
+
+.mback.closing .modal {
+  animation: modalOut 0.16s var(--ease-out) both;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modalOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+.modal h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.modal p {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.m-inner {
+  padding: 14px;
+  background: var(--panel-inner);
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24);
+  margin-bottom: 12px;
+}
+
+.modal input[type="text"],
+.modal textarea,
+.modal select {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--panel3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13.5px;
+}
+
+.modal input[type="text"]:focus,
+.modal textarea:focus,
+.modal select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.mbtns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mbtns button {
+  padding: 7px 15px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-inner);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+}
+
+.mbtns button:hover {
+  background: #233354;
+  border-color: var(--accent);
+}
+
+.mbtns button:active {
+  transform: scale(0.97);
+}
+
+.mbtns button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 500;
+  box-shadow: 0 4px 14px rgba(77, 141, 255, 0.28);
+}
+
+.mbtns button.primary:hover {
+  filter: brightness(1.08);
+}
+
+.mbtns button.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+/* ---- Panel Detail Gambar + Atur Posisi/Crop + Slideshow Multi-Gambar ---- */
+.modal.detail {
+  display: flex;
+  gap: 16px;
+  width: min(940px, 95vw);
+  padding: 16px;
+}
+
+.dleft {
+  flex: 1.35;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dimg {
+  position: relative;
+  flex: 1;
+  min-height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel3);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.dimg>img {
+  display: block;
+  max-width: 100%;
+  max-height: 58vh;
+  object-fit: contain;
+  transition: opacity 0.16s var(--ease-out);
+}
+
+.dimg>img.switching {
+  opacity: 0;
+}
+
+/* Mode Crop & Geser Posisi di dalam .dimg */
+.crop-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  padding: 14px;
+}
+
+.crop-frame {
+  position: relative;
+  width: var(--crop-w, 220px);
+  height: var(--crop-h, 220px);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: grab;
+  background: #050811;
+  outline: 2px solid var(--accent);
+  box-shadow: 0 0 0 999px rgba(4, 8, 16, 0.65), 0 8px 24px rgba(0, 0, 0, 0.6);
+  touch-action: none;
+  user-select: none;
+}
+
+.crop-frame:active {
+  cursor: grabbing;
+}
+
+.crop-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: var(--fit);
+  display: block;
+  pointer-events: none;
+}
+
+/* Garis bantu rule-of-thirds tipis saat crop */
+.crop-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.18) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.18) 1px, transparent 1px);
+  background-size: 33.333% 33.333%;
+}
+
+.crop-controls {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: var(--panel-inner);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.crop-controls input[type="range"] {
+  width: 120px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.crop-hint {
+  position: relative;
+  z-index: 2;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* Toolbar Bawah Gambar: Tombol Crop & Baris Slideshow (Multi-Gambar dalam 1 Item) */
+.dmedia-bar {
+  padding: 10px 12px;
+  background: var(--panel-inner);
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dmedia-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dmedia-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.dmedia-btns {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dm-btn {
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--panel3);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.dm-btn:hover {
+  background: var(--panel-hover);
+  border-color: var(--accent);
+}
+
+.dm-btn.active {
+  background: rgba(77, 141, 255, 0.2);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* Daftar thumbnail frame slideshow */
+.slides-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px;
+}
+
+.slide-thumb {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  flex: none;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--panel3);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.slide-thumb:hover {
+  transform: translateY(-1px);
+  border-color: var(--muted);
+}
+
+.slide-thumb.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.slide-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+.slide-thumb .s-num {
+  position: absolute;
+  left: 3px;
+  bottom: 2px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10px;
+}
+
+.slide-thumb .s-del {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.14s, background 0.14s;
+}
+
+.slide-thumb:hover .s-del {
+  opacity: 1;
+}
+
+.slide-thumb .s-del:hover {
+  background: var(--danger);
+}
+
+/* Pemilih gambar dari inventaris/tier untuk digabung ke slideshow */
+.merge-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 130px;
+  overflow-y: auto;
+  padding: 8px;
+  background: var(--panel3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.merge-pick-item {
+  width: 46px;
+  height: 46px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  padding: 0;
+  background: none;
+  transition: transform 0.14s, border-color 0.14s;
+}
+
+.merge-pick-item:hover {
+  transform: scale(1.08);
+  border-color: var(--accent);
+}
+
+.merge-pick-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dnav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 52px;
+  border: 0;
+  background: rgba(7, 11, 20, 0.55);
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dnav.prev {
+  left: 0;
+  border-radius: 0 8px 8px 0;
+}
+
+.dnav.next {
+  right: 0;
+  border-radius: 8px 0 0 8px;
+}
+
+.dnav:hover {
+  background: rgba(77, 141, 255, 0.72);
+}
+
+.dside {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 78vh;
+}
+
+.dhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 2px 4px 10px;
+}
+
+.dwhere {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.dmove-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.dmove-wrap select {
+  width: auto;
+  max-width: 145px;
+  padding: 3px 8px;
+  font-size: 12px;
+  background: var(--panel-inner);
+}
+
+.dprops {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  background: var(--panel-inner);
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+}
+
+.dhint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dhint .saved-pill {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+  color: var(--success);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.dhint .saved-pill.on {
+  opacity: 1;
+}
+
+.prow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  background: rgba(11, 16, 29, 0.55);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.prow:hover {
+  background: rgba(11, 16, 29, 0.8);
+}
+
+.prow:focus-within {
+  background: var(--panel3);
+  border-color: rgba(77, 141, 255, 0.5);
+}
+
+.prow-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.modal .prow input[type="text"] {
+  flex: 1;
+  margin: 0;
+  padding: 4px 6px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6bc5ff;
+}
+
+.modal .prow input[type="text"]:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.modal .prow textarea {
+  width: 100%;
+  min-height: 38px;
+  padding: 4px 6px;
+  resize: vertical;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.modal .prow textarea:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.prow .x {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  flex: none;
+}
+
+.prow .x:hover {
+  background: rgba(255, 92, 108, 0.18);
+  color: var(--danger);
+}
+
+.addprop {
+  width: 100%;
+  margin-top: 2px;
+  padding: 7px 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.addprop:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.dempty {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ---- Modal Pengaturan & Deskripsi Tier ---- */
+.modal.tier-modal {
+  width: min(620px, 94vw);
+  padding: 18px;
+}
+
+.tm-header {
+  text-align: center;
+  padding-bottom: 12px;
+}
+
+.tm-header h3 {
+  font-size: 17px;
+  margin: 0 0 2px;
+}
+
+.tm-header p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.tm-card {
+  padding: 14px 16px;
+  background: var(--panel-inner);
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+  margin-bottom: 12px;
+}
+
+.tm-field-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tm-badge-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  flex: none;
+}
+
+.tm-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.tm-swatches {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.tm-swatches button {
+  height: 28px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: transform 0.14s var(--ease-spring), border-color 0.14s;
+}
+
+.tm-swatches button:hover {
+  transform: scale(1.1);
+}
+
+.tm-swatches button.on {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px var(--accent), 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.cp-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 12px;
+  align-items: stretch;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cp-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cp-sv-wrap {
+  position: relative;
+  width: 100%;
+  height: 112px;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.cp-sv-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.cp-sv-cursor {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.9);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.cp-hue-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-hue {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);
+  outline: none;
+  cursor: pointer;
+}
+
+.cp-hue::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #0b101d;
+  cursor: pointer;
+}
+
+.cp-native-btn {
+  position: relative;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--panel3);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  flex: none;
+}
+
+.cp-native-btn:hover {
+  color: var(--text);
+}
+
+.cp-native-btn input[type="color"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.cp-codes {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.cp-code-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: var(--panel3);
+  border-radius: 8px;
+}
+
+.cp-code-tag {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  padding-left: 2px;
+}
+
+.modal .cp-code-row input[type="text"] {
+  padding: 4px 6px;
+  font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
+  font-size: 12px;
+  background: transparent;
+  border: 0;
+}
+
+.modal .cp-code-row input[type="text"]:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.cp-copy-btn {
+  padding: 4px 9px;
+  border-radius: 6px;
+  border: 0;
+  background: var(--panel-inner);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+
+.cp-copy-btn:hover {
+  background: #253659;
+  color: var(--accent);
+}
+
+.cp-copy-btn.copied {
+  background: rgba(74, 222, 128, 0.2);
+  color: var(--success);
+}
+
+.tm-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.tm-left-acts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tm-act-btn {
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-inner);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s;
+}
+
+.tm-act-btn:hover {
+  background: #233354;
+  border-color: var(--accent);
+}
+
+.tm-act-btn.danger {
+  color: #ff7b7b;
+}
+
+.tm-act-btn.danger:hover {
+  background: rgba(255, 92, 108, 0.2);
+  border-color: var(--danger);
+}
+
+/* ---- Modal Pengaturan Tampilan Gambar ---- */
+.view-opt-group {
+  margin-bottom: 12px;
+}
+
+.view-opt-group:last-child {
+  margin-bottom: 0;
+}
+
+.seg-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.seg-btn {
+  flex: 1;
+  min-width: 72px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--panel3);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+
+.seg-btn:hover {
+  color: var(--text);
+}
+
+.seg-btn.active {
+  background: rgba(77, 141, 255, 0.18);
+  color: var(--text);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
   .modal.detail {
-      display: flex;
-      gap: 16px;
-      width: min(880px, 94vw);
-      padding: 14px;
-  }
-
-  .dimg {
-      position: relative;
-      flex: 1.4;
-      min-height: 220px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 0, 0, .35);
-      border-radius: 10px;
-      overflow: hidden;
-  }
-
-  .dimg img {
-      display: block;
-      max-width: 100%;
-      max-height: 72vh;
-      object-fit: contain;
-  }
-
-  .dnav {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 34px;
-      height: 52px;
-      border: 0;
-      background: rgba(0, 0, 0, .45);
-      color: #fff;
-      font-size: 24px;
-      cursor: pointer;
-  }
-
-  .dnav.prev {
-      left: 0;
-      border-radius: 0 8px 8px 0;
-  }
-
-  .dnav.next {
-      right: 0;
-      border-radius: 8px 0 0 8px;
-  }
-
-  .dnav:hover {
-      background: rgba(77, 141, 255, .55);
+    flex-direction: column;
   }
 
   .dside {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      max-height: 72vh;
+    max-height: none;
   }
 
-  .dwhere {
-      margin-bottom: 12px;
-      font-family: ui-monospace, Consolas, monospace;
-      font-size: 12px;
-      color: var(--muted);
+  .cp-layout {
+    grid-template-columns: 1fr;
   }
 
-  .dprops {
-      flex: 1;
-      overflow-y: auto;
-      margin-bottom: 12px;
+  .dock-tip {
+    display: none;
   }
-
-  .dprops .k {
-      margin-top: 12px;
-      font-size: 11px;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      color: var(--accent);
-  }
-
-  .dprops .k:first-child {
-      margin-top: 0;
-  }
-
-  .dprops .v {
-      font-size: 14px;
-      line-height: 1.5;
-      white-space: pre-wrap;
-      word-break: break-word;
-  }
-
-  .dempty {
-      font-size: 13px;
-      color: var(--muted);
-  }
-
-  @media (max-width:640px) {
-      .modal.detail {
-          flex-direction: column;
-      }
-
-      .dside {
-          max-height: none;
-      }
-  }
-
-  /* ---- pengingat backup ---- */
-  #backupInfo {
-      font-family: ui-monospace, Consolas, monospace;
-      font-size: 12px;
-      color: var(--muted);
-      cursor: pointer;
-  }
-
-  #backupInfo.warn {
-      color: #ffcf5a;
-  }
-
-  /* ---- panel gambar: ikon pensil + mode ubah di tempat ---- */
-  .dhead {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 12px;
-  }
-
-  .dhead .dwhere {
-      margin-bottom: 0;
-  }
-
-  .dpencil {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      padding: 0;
-      border: 0;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, .08);
-      color: var(--text);
-      cursor: pointer;
-      flex: none;
-  }
-
-  .dpencil:hover {
-      background: var(--accent);
-  }
-
-  .dpencil[hidden],
-  .dnav[hidden] {
-      display: none;
-  }
-
-  .dside .prow {
-      display: grid;
-      grid-template-columns: 1fr 30px;
-  }
-
-  .modal .dside .prow input[type=text] {
-      width: 100%;
-  }
-
-  .dside .prow textarea {
-      grid-column: 1 / -1;
-      grid-row: 2;
-  }
-
-  .dside .prow .x {
-      grid-column: 2;
-      grid-row: 1;
-  }
-
-  /* ---- inventaris gambar: menempel di bawah layar ---- */
-  #dock {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      z-index: 30;
-      background: rgba(14, 21, 36, .94);
-      backdrop-filter: blur(14px);
-      border-top: 1px solid var(--border);
-      box-shadow: 0 -8px 24px rgba(0, 0, 0, .4);
-  }
-
-  .dock-bar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      width: 100%;
-      padding: 9px 24px;
-      border: 0;
-      background: none;
-      color: var(--text);
-      font: inherit;
-      font-size: 13px;
-      text-align: left;
-      cursor: pointer;
-  }
-
-  .dock-bar:hover {
-      background: rgba(255, 255, 255, .04);
-  }
-
-  .dock-bar .dt {
-      font-weight: 600;
-  }
-
-  .dock-bar #dockCount {
-      font-family: ui-monospace, Consolas, monospace;
-      font-size: 12px;
-      color: var(--muted);
-  }
-
-  .dock-bar .chev {
-      margin-left: auto;
-      color: var(--muted);
-  }
-
-  .dock-body {
-      height: var(--dock-h, 220px);
-      overflow-y: auto;
-      padding: 0 24px 14px;
-      transition: height .22s ease;
-  }
-
-  #dock.closed .dock-body {
-      height: 0;
-      padding-bottom: 0;
-      overflow: hidden;
-  }
-
-  #dock.resizing .dock-body {
-      transition: none;
-  }
-
-  #dockGrip {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 12px;
-      cursor: ns-resize;
-      touch-action: none;
-  }
-
-  #dockGrip span {
-      width: 44px;
-      height: 4px;
-      border-radius: 2px;
-      background: var(--border);
-  }
-
-  #dockGrip:hover span,
-  #dock.resizing #dockGrip span {
-      background: var(--accent);
-  }
-
-  body.resizing-dock {
-      user-select: none;
-      cursor: ns-resize;
-  }
-
-  h1 a {
-      color: inherit;
-      text-decoration: none;
-  }
-
-  #pool {
-      min-height: calc(var(--size) + 12px);
-      border-radius: 10px;
-  }
-
-  #pool:empty::before {
-      content: "Tarik gambar dari komputermu ke sini (bisa banyak sekaligus)";
-      padding: 8px;
-      color: var(--muted);
-  }
+}

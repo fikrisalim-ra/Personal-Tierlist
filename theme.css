@@ -1,13 +1,32 @@
-/* Palet warna Personal Tierlist. Ubah di sini, semua halaman ikut berubah. */
+/* Palet warna Personal Tierlist — Dark Navy Blue (Seimbang: 2-layer depth + glow halus) */
 :root {
   --bg: #070b14;
-  /* latar halaman */
-  --panel: #0e1524;
-  /* kartu / baris */
-  --panel2: #131c30;
-  /* pop-up / menu */
-  --border: #1c2740;
-  --text: #e7ecf8;
-  --muted: #7886a8;
+  /* latar utama biru gelap pekat */
+  --bg-elev: #0c1220;
+  /* latar bar / footer */
+  --panel: #101829;
+  /* kartu / baris tier */
+  --panel-hover: #162138;
+  /* kartu saat di-hover */
+  --panel2: #121b2e;
+  /* cangkang luar pop-up */
+  --panel-inner: #1a2640;
+  /* kartu dalam pop-up (2-layer seperti referensi screenshot) */
+  --panel3: #0b101d;
+  /* kolom input */
+  --border: #1f2d4a;
+  /* garis tepi biru gelap */
+  --border-light: rgba(120, 170, 255, 0.14);
+  --text: #eaf0fc;
+  /* teks utama */
+  --muted: #8496b8;
+  /* teks sekunder */
   --accent: #4d8dff;
+  /* aksen biru utama */
+  --accent-glow: rgba(77, 141, 255, 0.34);
+  --danger: #ff5c6c;
+  --success: #4ade80;
+  --warn: #ffcf5a;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
