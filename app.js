@@ -866,9 +866,9 @@ function openHelpModal() {
       <div class="help-sec">
         <h4>2. Properti, Autocomplete, &amp; Urutan</h4>
         <ul class="help-list">
-          <li><strong>Autocomplete Cepat:</strong> Saat mengetik <em>Judul</em> properti (misal: <code>G</code> untuk <code>Game</code>), tekan <code>Tab</code> atau <code>Enter</code> untuk langsung melengkapi teks.</li>
-          <li><strong>Simpan Isi untuk Autocomplete (Opsional):</strong> Secara bawaan, <em>Isi</em> properti tidak disimpan ke kamus autocomplete. Jika ada isi yang sering dipakai berulang kali (misal nama game/anime), klik tombol <code>📌 Simpan isi</code> di baris tersebut agar ke depannya punya autocomplete saat diketik.</li>
-          <li><strong>Urutan Properti &amp; Label Gambar:</strong> Gunakan tombol <code>↑</code> dan <code>↓</code> di tiap baris properti untuk mengatur urutan. Properti paling atas (#1) akan dipakai sebagai teks label di bawah gambar jika fitur label diaktifkan di menu <em>Tampilan gambar</em>.</li>
+          <li><strong>Autocomplete Cepat:</strong> Saat mengetik <em>Judul</em> properti (misal: <code>G</code> untuk <code>Game</code>), tekan <code>Tab</code> atau <code>Enter</code> untuk langsung melengkapi teks. Tekan <code>Enter</code> lagi saat selesai mengetik isi (<code>Shift + Enter</code> untuk baris baru).</li>
+          <li><strong>Simpan Isi untuk Autocomplete (Opsional):</strong> Saat sedang mengetik <em>Isi</em> properti, tombol <code>📌 Simpan isi</code> akan muncul di atasnya. Klik tombol tersebut jika ingin menyimpan teks itu ke kamus autocomplete untuk gambar-gambar berikutnya.</li>
+          <li><strong>Urutan Properti &amp; Label Gambar:</strong> Seret ikon titik-titik <code>⠿</code> di sebelah kiri judul properti untuk mengubah urutan (drag &amp; drop seperti baris tier). Properti paling atas (#1) akan dipakai sebagai teks label di bawah gambar jika fitur label diaktifkan di menu <em>Tampilan gambar</em>.</li>
         </ul>
       </div>
       <div class="help-sec">
@@ -1379,27 +1379,44 @@ function findMatches(query, pool) {
 function buildLivePropsEditor(initialList, onChange) {
     const wrap = mk('div', 'live-props-wrap');
     const listEl = mk('div', 'live-props-list');
+    const pmarker = mk('div', 'pmarker');
+    let dragPropRow = null;
 
     function emitChange() {
-        const cleaned = cleanProps([...listEl.children].map(r => ({
+        const cleaned = cleanProps([...listEl.querySelectorAll(':scope > .prow')].map(r => ({
             t: r.querySelector('input').value,
             v: r.querySelector('textarea').value,
         })));
-        refreshRowMoveButtons();
         onChange(cleaned);
     }
 
-    function refreshRowMoveButtons() {
-        const rows = [...listEl.children];
-        rows.forEach((r, idx) => {
-            const upB = r.querySelector('.move-up');
-            const dnB = r.querySelector('.move-down');
-            if (upB) upB.disabled = idx === 0;
-            if (dnB) dnB.disabled = idx === rows.length - 1;
+    // Drag & Drop untuk mengubah urutan baris properti (seperti reorder tierlist)
+    listEl.addEventListener('dragover', e => {
+        if (!dragPropRow) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const rows = [...listEl.querySelectorAll(':scope > .prow:not(.moving)')];
+        const before = rows.find(r => {
+            const b = r.getBoundingClientRect();
+            return e.clientY < b.top + b.height / 2;
         });
-    }
+        listEl.insertBefore(pmarker, before || null);
+    });
 
-    function wireAutocomplete(field, getPool, onAccepted) {
+    listEl.addEventListener('drop', e => {
+        if (!dragPropRow) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (pmarker.parentElement === listEl) {
+            listEl.insertBefore(dragPropRow, pmarker);
+        }
+        pmarker.remove();
+        dragPropRow.classList.remove('moving');
+        dragPropRow = null;
+        emitChange();
+    });
+
+    function wireAutocomplete(field, getPool, onAccepted, onFinishEnter) {
         const acBar = mk('div', 'ac-bar');
         acBar.hidden = true;
         let currentMatches = [];
@@ -1423,7 +1440,7 @@ function buildLivePropsEditor(initialList, onChange) {
                 chip.appendChild(mk('span', '', m));
                 if (idx === 0) chip.appendChild(mk('span', 'ac-kbd', 'Tab / Enter'));
                 chip.addEventListener('mousedown', e => {
-                    e.preventDefault(); // jangan hilangkan fokus input
+                    e.preventDefault();
                     applyMatch(m);
                 });
                 acBar.appendChild(chip);
@@ -1449,12 +1466,20 @@ function buildLivePropsEditor(initialList, onChange) {
                     e.preventDefault();
                     e.stopPropagation();
                     applyMatch(currentMatches[0]);
+                    return;
                 } else if (e.key === 'Escape') {
                     e.preventDefault();
                     e.stopPropagation();
                     acBar.hidden = true;
                     currentMatches = [];
+                    return;
                 }
+            }
+            // Jika tidak sedang memilih autocomplete, tekan Enter (tanpa Shift) = selesai mengetik!
+            if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onFinishEnter) onFinishEnter();
             }
         });
 
@@ -1464,6 +1489,10 @@ function buildLivePropsEditor(initialList, onChange) {
     function addRow(p = { t: '', v: '' }) {
         const r = mk('div', 'prow');
         const top = mk('div', 'prow-top');
+        const handle = mk('div', 'phandle', '⠿');
+        handle.draggable = true;
+        handle.title = 'Seret untuk mengubah urutan properti';
+
         const tWrap = mk('div', 'pfield-wrap');
         const t = mk('input');
         const vWrap = mk('div', 'pfield-wrap');
@@ -1471,74 +1500,79 @@ function buildLivePropsEditor(initialList, onChange) {
 
         const pinB = mk('button', 'pbtn pin-btn');
         pinB.type = 'button';
-        const upB = mk('button', 'pbtn move-up', '↑');
-        upB.type = 'button';
-        upB.title = 'Geser properti ini ke atas';
-        const dnB = mk('button', 'pbtn move-down', '↓');
-        dnB.type = 'button';
-        dnB.title = 'Geser properti ini ke bawah';
         const x = mk('button', 'x', '×');
         x.type = 'button';
         x.title = 'Hapus properti ini';
 
         t.type = 'text';
         t.value = p.t;
-        t.placeholder = 'Judul (ketik & tekan Tab/Enter untuk auto)…';
+        t.placeholder = 'Judul (ketik & tekan Tab/Enter)…';
         t.maxLength = 60;
 
         v.value = p.v;
-        v.placeholder = 'Tulis isi atau catatan di sini…';
+        v.placeholder = 'Tulis isi atau catatan (Enter = selesai, Shift+Enter = baris baru)…';
         v.rows = 2;
         v.maxLength = 2000;
 
         function syncPinUI() {
             const valStr = v.value.trim();
+            const isFocused = document.activeElement === v;
             const saved = isValueSaved(valStr);
+            // Tombol "Simpan isi" hanya muncul saat sedang mengetik/fokus di kolom isi (dan ada teksnya)
+            pinB.classList.toggle('show', isFocused && valStr.length > 0);
             pinB.classList.toggle('saved', saved);
             pinB.textContent = saved ? '📌 Tersimpan' : '📌 Simpan isi';
             pinB.title = saved
-                ? 'Isi ini tersimpan di kamus autocomplete. Klik untuk menghapus dari autocomplete.'
-                : 'Simpan teks isi ini ke kamus autocomplete (opsional, untuk nama game/anime yang sering diulang)';
-            pinB.disabled = !valStr;
+                ? 'Tersimpan di autocomplete. Klik untuk hapus dari autocomplete.'
+                : 'Simpan isi ini ke autocomplete untuk dipakai lagi nanti';
         }
 
-        pinB.addEventListener('click', () => {
+        // Gunakan mousedown + preventDefault agar klik tombol Simpan isi tidak menghilangkan fokus v
+        pinB.addEventListener('mousedown', e => {
+            e.preventDefault();
             if (!v.value.trim()) return;
             toggleSavedValue(v.value);
-            // Sinkronkan semua tombol pin di layar jika ada nilai yang sama
             listEl.querySelectorAll('.prow').forEach(rowEl => rowEl._syncPin && rowEl._syncPin());
         });
         r._syncPin = syncPinUI;
 
-        upB.addEventListener('click', () => {
-            const prevRow = r.previousElementSibling;
-            if (!prevRow) return;
-            listEl.insertBefore(r, prevRow);
-            emitChange();
+        handle.addEventListener('dragstart', e => {
+            dragPropRow = r;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', 'prop');
+            e.dataTransfer.setDragImage(r, 16, 16);
+            setTimeout(() => r.classList.add('moving'));
         });
-        dnB.addEventListener('click', () => {
-            const nextRow = r.nextElementSibling;
-            if (!nextRow) return;
-            listEl.insertBefore(nextRow, r);
-            emitChange();
+        handle.addEventListener('dragend', () => {
+            if (dragPropRow) dragPropRow.classList.remove('moving');
+            dragPropRow = null;
+            pmarker.remove();
         });
 
         x.addEventListener('click', () => {
             r.remove();
-            if (!listEl.children.length) addRow({ t: '', v: '' });
+            if (!listEl.querySelectorAll(':scope > .prow').length) addRow({ t: '', v: '' });
             emitChange();
         });
 
-        const tAcBar = wireAutocomplete(t, getUsedTitles, () => {
-            emitChange();
-            v.focus();
-        });
-        const vAcBar = wireAutocomplete(v, () => state.savedValues || [], () => {
-            syncPinUI();
-            emitChange();
-        });
+        const tAcBar = wireAutocomplete(
+            t,
+            getUsedTitles,
+            () => { emitChange(); v.focus(); },
+            () => { v.focus(); }
+        );
+        const vAcBar = wireAutocomplete(
+            v,
+            () => state.savedValues || [],
+            () => { syncPinUI(); emitChange(); },
+            () => { v.blur(); }
+        );
 
         t.addEventListener('input', emitChange);
+        v.addEventListener('focus', syncPinUI);
+        v.addEventListener('blur', () => {
+            setTimeout(syncPinUI, 80);
+        });
         v.addEventListener('input', () => {
             syncPinUI();
             emitChange();
@@ -1546,11 +1580,10 @@ function buildLivePropsEditor(initialList, onChange) {
 
         tWrap.append(t, tAcBar);
         vWrap.append(v, vAcBar);
-        top.append(tWrap, pinB, upB, dnB, x);
+        top.append(handle, tWrap, pinB, x);
         r.append(top, vWrap);
         listEl.appendChild(r);
         syncPinUI();
-        refreshRowMoveButtons();
         return t;
     }
 
