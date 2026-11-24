@@ -350,55 +350,228 @@ section h2 {
   color: var(--muted);
 }
 
-/* Showcase */
-.showcase-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+/* Showcase — Featured Spotlight Card (Lebih Menonjol) */
+.sc-sec-head {
+  margin-bottom: 24px;
 }
 
-.sc-card {
+.sc-eyebrow {
+  margin-bottom: 6px;
+}
+
+.sc-featured {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 28px;
+  align-items: center;
+  padding: 32px;
+  background: linear-gradient(145deg, rgba(22, 34, 60, 0.92) 0%, rgba(14, 21, 38, 0.95) 100%);
+  border: 1px solid rgba(77, 141, 255, 0.45);
+  border-top-color: rgba(140, 190, 255, 0.45);
+  border-radius: 22px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), 0 0 36px rgba(77, 141, 255, 0.14);
+  overflow: hidden;
+  transition: transform 0.28s var(--ease-out), box-shadow 0.28s var(--ease-out), border-color 0.28s;
+}
+
+.sc-featured:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  box-shadow: 0 30px 72px rgba(0, 0, 0, 0.65), 0 0 48px rgba(77, 141, 255, 0.24);
+}
+
+.sc-glow-orb {
+  position: absolute;
+  top: -120px;
+  right: -100px;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(77, 141, 255, 0.22) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.sc-left {
+  position: relative;
+  z-index: 1;
+}
+
+.sc-badges {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 22px 24px;
-  background: var(--panel);
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.sc-badge-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #070b14;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.sc-badge-sub {
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sc-left h3 {
+  margin: 0 0 10px;
+  font-size: clamp(24px, 3.5vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.sc-desc {
+  margin: 0 0 20px;
+  font-size: 15px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.sc-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.sc-stat {
+  flex: 1;
+  min-width: 105px;
+  padding: 10px 14px;
+  background: rgba(9, 14, 26, 0.65);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sc-stat strong {
+  font-size: 18px;
+  color: var(--text);
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.sc-stat span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.sc-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 26px;
+  font-size: 15px;
+  border-radius: 12px;
+}
+
+/* Kotak Pratinjau Visual di Kanan Kartu Showcase */
+.sc-preview {
+  position: relative;
+  z-index: 1;
+  display: block;
+  padding: 14px;
+  background: rgba(8, 13, 24, 0.85);
   border: 1px solid var(--border);
   border-top-color: var(--border-light);
   border-radius: 16px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
-  transition: transform 0.22s var(--ease-out), border-color 0.22s, box-shadow 0.22s;
+  text-decoration: none;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  transition: transform 0.24s var(--ease-out), border-color 0.24s;
 }
 
-.sc-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(77, 141, 255, 0.5);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42), 0 0 20px rgba(77, 141, 255, 0.12);
+.sc-preview:hover {
+  transform: scale(1.02);
+  border-color: var(--accent);
 }
 
-.sc-tag {
-  display: inline-block;
-  margin-bottom: 6px;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: rgba(77, 141, 255, 0.14);
+.sc-prev-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px 10px;
   font-family: ui-monospace, Consolas, monospace;
-  font-size: 11px;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.sc-info h3 {
-  margin: 0 0 4px;
-  font-size: 18px;
-}
-
-.sc-info p {
-  margin: 0;
-  font-size: 14px;
+  font-size: 11.5px;
   color: var(--muted);
+}
+
+.sc-prev-hint {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.sc-prev-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.sc-prow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 6px;
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  overflow: hidden;
+  min-height: 58px;
+}
+
+.sc-prow b {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 78px;
+  align-self: stretch;
+  padding: 4px 6px;
+  flex: none;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.sc-prow i,
+.sc-prow img {
+  width: 46px;
+  height: 46px;
+  margin: 6px 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.09);
+  object-fit: cover;
+  flex: none;
+  display: block;
+}
+
+.sc-more {
+  margin-left: auto;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(77, 141, 255, 0.14);
+  color: var(--accent);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11.5px;
+  font-weight: 700;
 }
 
 details {
@@ -557,9 +730,9 @@ details p {
     grid-template-columns: 1fr;
   }
 
-  .sc-card {
-    flex-direction: column;
-    align-items: flex-start;
+  .sc-featured {
+    grid-template-columns: 1fr;
+    padding: 22px;
   }
 
   .navlinks a:not(.btn) {

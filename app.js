@@ -127,16 +127,22 @@ let lastDroppedId = null;
 // Status frame aktif untuk tiap item yang punya slideshow
 const slideCursors = new Map(); // primaryId -> index frame saat ini
 
-// ---------- Auto-Scroll Saat Drag Gambar atau Tier (Untuk 100+ Baris Tier) ----------
+// ---------- Auto-Scroll Saat Drag Gambar atau Tier (Pintar: Tidak Mental ke Bawah Saat Drag dari Inventaris) ----------
 let dragActive = false;
 let dragClientY = 0;
+let prevDragY = 0;
+let dragMoveDir = 0;         // -1 = bergerak ke atas, 1 = bergerak ke bawah, 0 = diam
+let canScrollDown = false;   // baru aktif setelah kursor keluar dari area bawah/inventaris ke area tengah
+let edgeZoneDir = 0;         // zona tepi yang sedang dimasuki (-1 atas, 1 bawah, 0 tengah)
+let edgeEnterTs = 0;         // waktu mulai masuk zona tepi (dwell delay agar lewat sekilas tidak langsung scroll)
 let lastDragOverTs = 0;
 let autoScrollRaf = null;
 
 function startAutoScroll() {
     if (autoScrollRaf) return;
     function tick() {
-        if (!dragActive || Date.now() - lastDragOverTs > 260) {
+        const now = Date.now();
+        if (!dragActive || now - lastDragOverTs > 260) {
             autoScrollRaf = null;
             return;
         }
@@ -144,26 +150,43 @@ function startAutoScroll() {
         const dockEl = document.getElementById('dock');
         const dockBodyEl = document.getElementById('dockBody');
         const headerBottom = headerEl ? headerEl.getBoundingClientRect().bottom : 54;
-        const dockTop = (dockEl && !dockEl.classList.contains('closed'))
-            ? dockEl.getBoundingClientRect().top
-            : innerHeight;
+        const dockOpen = dockEl && !dockEl.classList.contains('closed');
+        const dockTop = dockOpen ? dockEl.getBoundingClientRect().top : innerHeight;
 
-        const EDGE = 95;
-        const MAX_SPEED = 22;
+        const EDGE = 64;
+        const MAX_SPEED = 20;
+        const DWELL_MS = 110;
 
-        if (dockEl && !dockEl.classList.contains('closed') && dragClientY >= dockTop) {
+        // Jika kursor berada di dalam inventaris (#dock), reset izin scroll bawah halaman
+        if (dockOpen && dragClientY >= dockTop) {
+            canScrollDown = false;
+            edgeZoneDir = 0;
             const r = dockBodyEl.getBoundingClientRect();
-            if (dragClientY < r.top + 48) dockBodyEl.scrollTop -= 8;
-            else if (dragClientY > r.bottom - 48) dockBodyEl.scrollTop += 8;
+            if (dragClientY < r.top + 38 && dragMoveDir <= 0) dockBodyEl.scrollTop -= 7;
+            else if (dragClientY > r.bottom - 38 && dragMoveDir >= 0) dockBodyEl.scrollTop += 7;
         } else {
             const topTrigger = headerBottom + EDGE;
             const bottomTrigger = dockTop - EDGE;
-            if (dragClientY < topTrigger) {
-                const ratio = Math.min(1, Math.max(0.1, (topTrigger - dragClientY) / EDGE));
-                window.scrollBy(0, -Math.round(MAX_SPEED * ratio * ratio));
-            } else if (dragClientY > bottomTrigger) {
-                const ratio = Math.min(1, Math.max(0.1, (dragClientY - bottomTrigger) / EDGE));
-                window.scrollBy(0, Math.round(MAX_SPEED * ratio * ratio));
+
+            // Kursor sudah masuk ke area tengah tierlist -> sekarang baru boleh scroll ke bawah kalau nanti turun lagi
+            if (dragClientY < bottomTrigger - 16) {
+                canScrollDown = true;
+            }
+
+            if (dragClientY < topTrigger && dragMoveDir <= 0) {
+                if (edgeZoneDir !== -1) { edgeZoneDir = -1; edgeEnterTs = now; }
+                if (now - edgeEnterTs >= DWELL_MS) {
+                    const ratio = Math.min(1, Math.max(0.12, (topTrigger - dragClientY) / EDGE));
+                    window.scrollBy(0, -Math.round(MAX_SPEED * ratio * ratio));
+                }
+            } else if (dragClientY > bottomTrigger && canScrollDown && dragMoveDir >= 0) {
+                if (edgeZoneDir !== 1) { edgeZoneDir = 1; edgeEnterTs = now; }
+                if (now - edgeEnterTs >= DWELL_MS) {
+                    const ratio = Math.min(1, Math.max(0.12, (dragClientY - bottomTrigger) / EDGE));
+                    window.scrollBy(0, Math.round(MAX_SPEED * ratio * ratio));
+                }
+            } else {
+                edgeZoneDir = 0;
             }
         }
         autoScrollRaf = requestAnimationFrame(tick);
@@ -173,26 +196,65 @@ function startAutoScroll() {
 
 function stopAutoScroll() {
     dragActive = false;
+    canScrollDown = false;
+    edgeZoneDir = 0;
+    dragMoveDir = 0;
+    document.getElementById('dock')?.classList.remove('dock-over');
     if (autoScrollRaf) {
         cancelAnimationFrame(autoScrollRaf);
         autoScrollRaf = null;
     }
 }
 
+const hasExternalFiles = dt => {
+    if (!dt || !dt.types) return false;
+    for (const t of dt.types) {
+        if (t === 'Files') return true;
+    }
+    return false;
+};
+
 window.addEventListener('dragover', e => {
     e.preventDefault();
     if (viewOnly) return;
+    // Jika menyeret file dari luar browser (Explorer), pastikan status drag internal lama dibersihkan
+    if (hasExternalFiles(e.dataTransfer) && (dragId || dragTierId)) {
+        dragId = null;
+        dragTierId = null;
+    }
+    const dy = e.clientY - prevDragY;
+    if (Math.abs(dy) >= 2) dragMoveDir = dy < 0 ? -1 : 1;
+    prevDragY = e.clientY;
     dragClientY = e.clientY;
     lastDragOverTs = Date.now();
     if (!dragActive) {
         dragActive = true;
+        const dockEl = document.getElementById('dock');
+        const dockTop = (dockEl && !dockEl.classList.contains('closed')) ? dockEl.getBoundingClientRect().top : innerHeight;
+        // Kalau mulai drag dari dalam/dekat inventaris, kunci scroll bawah sampai kursor naik ke area tier
+        canScrollDown = e.clientY < dockTop - 80;
         startAutoScroll();
     }
 });
-window.addEventListener('dragend', stopAutoScroll);
-window.addEventListener('drop', e => {
+window.addEventListener('dragend', () => {
+    dragId = null;
+    dragTierId = null;
+    stopAutoScroll();
+});
+window.addEventListener('drop', async e => {
     e.preventDefault();
     stopAutoScroll();
+    if (viewOnly) return;
+    // Fallback: jika user melepas file gambar dari komputer di area kosong halaman (di luar kotak tier/pool), tetap masukkan ke inventaris!
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        dragId = null;
+        dragTierId = null;
+        if (dock.classList.contains('closed')) setDock(true);
+        pushUndo();
+        statusEl.textContent = 'Menyimpan ke inventaris…';
+        await addFiles(e.dataTransfer.files, 'pool', null);
+        afterChange();
+    }
 });
 
 // ---------- Penyimpanan (IndexedDB) ----------
@@ -875,22 +937,30 @@ async function isAnimated(file) {
     return false;
 }
 
+async function shrinkImageCore(file) {
+    if (file.type === 'image/svg+xml' || await isAnimated(file)) return file;
+    const bmp = await createImageBitmap(file);
+    const longest = Math.max(bmp.width, bmp.height);
+    if (longest <= MAX_SIDE && file.size <= KEEP_BYTES) { bmp.close(); return file; }
+    const scale = Math.min(1, MAX_SIDE / longest);
+    const w = Math.max(1, Math.round(bmp.width * scale));
+    const h = Math.max(1, Math.round(bmp.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+    bmp.close();
+    const out = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.85));
+    return out && out.size < file.size ? out : file;
+}
+
 async function shrinkImage(file) {
     try {
-        if (file.type === 'image/svg+xml' || await isAnimated(file)) return file;
-        const bmp = await createImageBitmap(file);
-        const longest = Math.max(bmp.width, bmp.height);
-        if (longest <= MAX_SIDE && file.size <= KEEP_BYTES) { bmp.close(); return file; }
-        const scale = Math.min(1, MAX_SIDE / longest);
-        const w = Math.max(1, Math.round(bmp.width * scale));
-        const h = Math.max(1, Math.round(bmp.height * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
-        bmp.close();
-        const out = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.85));
-        return out && out.size < file.size ? out : file;
+        // Batas waktu 5 detik agar jika decoder canvas browser macet setelah ratusan gambar, otomatis pakai file asli tanpa hang
+        return await Promise.race([
+            shrinkImageCore(file),
+            new Promise(resolve => setTimeout(() => resolve(file), 5000))
+        ]);
     } catch (err) {
         console.error('Gagal mengecilkan, pakai file asli:', err);
         return file;
@@ -898,7 +968,7 @@ async function shrinkImage(file) {
 }
 
 async function storeFilesAsImages(files) {
-    const list = [...files].filter(f => f.type.startsWith('image/'));
+    const list = [...(files || [])].filter(f => f && (f.type.startsWith('image/') || /\.(png|jpe?g|gif|webp|avif|bmp|svg)$/i.test(f.name || '')));
     const newIds = [];
     for (let i = 0; i < list.length; i++) {
         statusEl.textContent = `Memproses gambar ${i + 1}/${list.length}…`;
@@ -2360,7 +2430,9 @@ function markerIndex(zoneEl) {
 
 function wireZone(zoneEl, zoneId) {
     zoneEl.addEventListener('dragover', e => {
-        if (viewOnly || dragTierId) return;
+        if (viewOnly) return;
+        if (hasExternalFiles(e.dataTransfer)) dragTierId = null;
+        if (dragTierId) return;
         e.preventDefault();
         zoneEl.classList.add('over');
         placeMarker(zoneEl, e.clientX, e.clientY);
@@ -2369,11 +2441,17 @@ function wireZone(zoneEl, zoneId) {
         if (!zoneEl.contains(e.relatedTarget)) { zoneEl.classList.remove('over'); marker.remove(); }
     });
     zoneEl.addEventListener('drop', async e => {
-        if (viewOnly || dragTierId) return;
+        if (viewOnly) return;
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            dragTierId = null;
+            dragId = null;
+        }
+        if (dragTierId) return;
         e.preventDefault();
         e.stopPropagation();
         stopAutoScroll();
         zoneEl.classList.remove('over');
+        dock.classList.remove('dock-over');
         const index = markerIndex(zoneEl);
         marker.remove();
         pushUndo();
@@ -2381,9 +2459,57 @@ function wireZone(zoneEl, zoneId) {
             removeEverywhere(dragId);
             listOf(zoneId).splice(index, 0, dragId);
             lastDroppedId = dragId;
-        } else {
+        } else if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             statusEl.textContent = 'Menyimpan…';
             await addFiles(e.dataTransfer.files, zoneId, index);
+        }
+        dragId = null;
+        afterChange();
+    });
+}
+
+// Hitbox 1 Panel Penuh untuk Inventaris (#dock): drag/drop di bagian mana saja pada panel inventaris langsung masuk ke #pool
+function wireDockFullHitbox() {
+    const poolEl = document.getElementById('pool');
+    dock.addEventListener('dragover', e => {
+        if (viewOnly) return;
+        if (hasExternalFiles(e.dataTransfer)) dragTierId = null;
+        if (dragTierId) return;
+        e.preventDefault();
+        if (dock.classList.contains('closed')) setDock(true);
+        dock.classList.add('dock-over');
+        poolEl.classList.add('over');
+        placeMarker(poolEl, e.clientX, e.clientY);
+    });
+    dock.addEventListener('dragleave', e => {
+        if (!dock.contains(e.relatedTarget)) {
+            dock.classList.remove('dock-over');
+            poolEl.classList.remove('over');
+            if (marker.parentElement === poolEl) marker.remove();
+        }
+    });
+    dock.addEventListener('drop', async e => {
+        if (viewOnly) return;
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            dragTierId = null;
+            dragId = null;
+        }
+        if (dragTierId) return;
+        e.preventDefault();
+        e.stopPropagation();
+        stopAutoScroll();
+        dock.classList.remove('dock-over');
+        poolEl.classList.remove('over');
+        const index = marker.parentElement === poolEl ? markerIndex(poolEl) : state.pool.length;
+        marker.remove();
+        pushUndo();
+        if (dragId) {
+            removeEverywhere(dragId);
+            state.pool.splice(index, 0, dragId);
+            lastDroppedId = dragId;
+        } else if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            statusEl.textContent = 'Menyimpan…';
+            await addFiles(e.dataTransfer.files, 'pool', index);
         }
         dragId = null;
         afterChange();
@@ -2430,11 +2556,14 @@ function applyViewOnlyUI() {
     document.getElementById('bottomAddRow').hidden = viewOnly;
     document.getElementById('btnUndo').hidden = viewOnly;
     document.getElementById('btnRedo').hidden = viewOnly;
+    document.getElementById('btnPng').hidden = viewOnly;
+    document.getElementById('btnExport').hidden = viewOnly;
     document.getElementById('btnImport').hidden = viewOnly;
     const descEl = document.getElementById('listDesc');
     descEl.readOnly = viewOnly;
+    descEl.hidden = viewOnly && !state.desc.trim();
     descEl.placeholder = viewOnly
-        ? 'Tidak ada deskripsi untuk tierlist ini.'
+        ? ''
         : 'Deskripsi tierlist (opsional): tulis catatan, aturan penilaian, atau apa saja…';
 }
 
@@ -2666,6 +2795,7 @@ async function init() {
     }
 
     wireZone(document.getElementById('pool'), 'pool');
+    wireDockFullHitbox();
 
     if (viewParam) {
         try {
