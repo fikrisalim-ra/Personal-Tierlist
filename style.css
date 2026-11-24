@@ -223,6 +223,24 @@ h1 a {
   cursor: default;
 }
 
+.actions button.help-btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--accent);
+  border-color: rgba(77, 141, 255, 0.35);
+}
+
+.actions button.help-btn:hover {
+  background: var(--accent);
+  color: #070b14;
+}
+
 #search {
   width: 190px;
   padding: 6px 10px;
@@ -732,12 +750,19 @@ body.show-item-labels .item.has-props::after {
   box-shadow: 0 0 10px var(--accent);
 }
 
+.dock-head {
+  display: flex;
+  align-items: center;
+  padding-right: 16px;
+}
+
 .dock-bar {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
-  padding: 8px 24px 9px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px 16px 9px 24px;
   border: 0;
   background: none;
   color: var(--text);
@@ -749,6 +774,25 @@ body.show-item-labels .item.has-props::after {
 
 .dock-bar:hover {
   background: rgba(255, 255, 255, 0.04);
+}
+
+.dock-add-btn {
+  flex: none;
+  padding: 5px 11px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  border-top-color: var(--border-light);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+}
+
+.dock-add-btn:hover {
+  background: var(--panel-hover);
+  border-color: var(--accent);
 }
 
 .dock-bar .dt {
@@ -1439,6 +1483,7 @@ body.show-item-labels .item.has-props::after {
 }
 
 .prow {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1462,11 +1507,19 @@ body.show-item-labels .item.has-props::after {
 .prow-top {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+}
+
+.pfield-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal .prow input[type="text"] {
-  flex: 1;
+  width: 100%;
   margin: 0;
   padding: 4px 6px;
   background: transparent;
@@ -1501,6 +1554,48 @@ body.show-item-labels .item.has-props::after {
   background: rgba(255, 255, 255, 0.04);
 }
 
+/* Tombol aksi per baris properti: Simpan Auto (Pin), Geser Naik/Turun, Hapus */
+.pbtn {
+  height: 24px;
+  min-width: 24px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  transition: background 0.14s, color 0.14s;
+}
+
+.pbtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.pbtn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.pbtn.pin-btn {
+  font-size: 11px;
+  padding: 0 7px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.pbtn.pin-btn.saved {
+  background: rgba(77, 141, 255, 0.18);
+  border-color: rgba(77, 141, 255, 0.45);
+  color: #6bc5ff;
+}
+
 .prow .x {
   width: 24px;
   height: 24px;
@@ -1516,6 +1611,120 @@ body.show-item-labels .item.has-props::after {
 .prow .x:hover {
   background: rgba(255, 92, 108, 0.18);
   color: var(--danger);
+}
+
+/* Bar Autocomplete Inline (Tab / Enter untuk melengkapi) */
+.ac-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 4px;
+  padding: 4px 6px;
+  background: rgba(18, 27, 46, 0.96);
+  border: 1px solid rgba(77, 141, 255, 0.38);
+  border-radius: 7px;
+}
+
+.ac-bar[hidden] {
+  display: none !important;
+}
+
+.ac-hint {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-right: 2px;
+}
+
+.ac-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s;
+}
+
+.ac-chip.first {
+  background: rgba(77, 141, 255, 0.22);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.ac-chip:hover {
+  background: rgba(77, 141, 255, 0.32);
+}
+
+.ac-kbd {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 9.5px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #9ec5ff;
+}
+
+/* Modal Panduan (?) */
+.modal.help-modal {
+  width: min(640px, 94vw);
+  padding: 20px;
+}
+
+.help-sec {
+  margin-bottom: 12px;
+}
+
+.help-sec:last-child {
+  margin-bottom: 0;
+}
+
+.help-sec h4 {
+  margin: 0 0 6px;
+  font-size: 13.5px;
+  color: #6bc5ff;
+}
+
+.help-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.help-list li {
+  margin-bottom: 5px;
+}
+
+.help-list li:last-child {
+  margin-bottom: 0;
+}
+
+.help-list code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11.5px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(77, 141, 255, 0.16);
+  color: #8cc0ff;
+}
+
+.help-warn-box {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 207, 90, 0.08);
+  border: 1px solid rgba(255, 207, 90, 0.3);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text);
 }
 
 .addprop {

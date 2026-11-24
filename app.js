@@ -113,6 +113,7 @@ state.exportedAt = 0;
 state.updatedAt = 0;
 state.desc = '';
 state.props = {};          // id utama -> [{ t, v }]
+state.savedValues = [];    // daftar isi (value) properti yang sengaja disimpan user untuk autocomplete
 state.crops = {};          // id gambar (utama atau slide) -> { x: 0..100, y: 0..100, z: 1..3 }
 state.slides = {};         // id utama -> [idSlide2, idSlide3, ...] (tetap dihitung 1 item & 1 properti)
 state.slideSpeed = 3700;   // durasi per slide (ms)
@@ -127,22 +128,17 @@ let lastDroppedId = null;
 // Status frame aktif untuk tiap item yang punya slideshow
 const slideCursors = new Map(); // primaryId -> index frame saat ini
 
-// ---------- Auto-Scroll Saat Drag Gambar atau Tier (Pintar: Tidak Mental ke Bawah Saat Drag dari Inventaris) ----------
+// ---------- Auto-Scroll Saat Drag Gambar atau Tier (Responsif seperti versi awal, tanpa mental ke bawah dari inventaris) ----------
 let dragActive = false;
 let dragClientY = 0;
-let prevDragY = 0;
-let dragMoveDir = 0;         // -1 = bergerak ke atas, 1 = bergerak ke bawah, 0 = diam
-let canScrollDown = false;   // baru aktif setelah kursor keluar dari area bawah/inventaris ke area tengah
-let edgeZoneDir = 0;         // zona tepi yang sedang dimasuki (-1 atas, 1 bawah, 0 tengah)
-let edgeEnterTs = 0;         // waktu mulai masuk zona tepi (dwell delay agar lewat sekilas tidak langsung scroll)
+let leftBottomSinceDock = false; // mencegah scroll ke bawah saat baru mengangkat gambar keluar dari inventaris
 let lastDragOverTs = 0;
 let autoScrollRaf = null;
 
 function startAutoScroll() {
     if (autoScrollRaf) return;
     function tick() {
-        const now = Date.now();
-        if (!dragActive || now - lastDragOverTs > 260) {
+        if (!dragActive || Date.now() - lastDragOverTs > 260) {
             autoScrollRaf = null;
             return;
         }
@@ -153,40 +149,26 @@ function startAutoScroll() {
         const dockOpen = dockEl && !dockEl.classList.contains('closed');
         const dockTop = dockOpen ? dockEl.getBoundingClientRect().top : innerHeight;
 
-        const EDGE = 64;
-        const MAX_SPEED = 20;
-        const DWELL_MS = 110;
+        const EDGE = 90;
+        const MAX_SPEED = 22;
 
-        // Jika kursor berada di dalam inventaris (#dock), reset izin scroll bawah halaman
         if (dockOpen && dragClientY >= dockTop) {
-            canScrollDown = false;
-            edgeZoneDir = 0;
+            leftBottomSinceDock = false;
             const r = dockBodyEl.getBoundingClientRect();
-            if (dragClientY < r.top + 38 && dragMoveDir <= 0) dockBodyEl.scrollTop -= 7;
-            else if (dragClientY > r.bottom - 38 && dragMoveDir >= 0) dockBodyEl.scrollTop += 7;
+            if (dragClientY < r.top + 44) dockBodyEl.scrollTop -= 8;
+            else if (dragClientY > r.bottom - 44) dockBodyEl.scrollTop += 8;
         } else {
             const topTrigger = headerBottom + EDGE;
             const bottomTrigger = dockTop - EDGE;
-
-            // Kursor sudah masuk ke area tengah tierlist -> sekarang baru boleh scroll ke bawah kalau nanti turun lagi
-            if (dragClientY < bottomTrigger - 16) {
-                canScrollDown = true;
+            if (dragClientY < bottomTrigger) {
+                leftBottomSinceDock = true;
             }
-
-            if (dragClientY < topTrigger && dragMoveDir <= 0) {
-                if (edgeZoneDir !== -1) { edgeZoneDir = -1; edgeEnterTs = now; }
-                if (now - edgeEnterTs >= DWELL_MS) {
-                    const ratio = Math.min(1, Math.max(0.12, (topTrigger - dragClientY) / EDGE));
-                    window.scrollBy(0, -Math.round(MAX_SPEED * ratio * ratio));
-                }
-            } else if (dragClientY > bottomTrigger && canScrollDown && dragMoveDir >= 0) {
-                if (edgeZoneDir !== 1) { edgeZoneDir = 1; edgeEnterTs = now; }
-                if (now - edgeEnterTs >= DWELL_MS) {
-                    const ratio = Math.min(1, Math.max(0.12, (dragClientY - bottomTrigger) / EDGE));
-                    window.scrollBy(0, Math.round(MAX_SPEED * ratio * ratio));
-                }
-            } else {
-                edgeZoneDir = 0;
+            if (dragClientY < topTrigger) {
+                const ratio = Math.min(1, Math.max(0.1, (topTrigger - dragClientY) / EDGE));
+                window.scrollBy(0, -Math.round(MAX_SPEED * ratio * ratio));
+            } else if (dragClientY > bottomTrigger && leftBottomSinceDock) {
+                const ratio = Math.min(1, Math.max(0.1, (dragClientY - bottomTrigger) / EDGE));
+                window.scrollBy(0, Math.round(MAX_SPEED * ratio * ratio));
             }
         }
         autoScrollRaf = requestAnimationFrame(tick);
@@ -196,9 +178,7 @@ function startAutoScroll() {
 
 function stopAutoScroll() {
     dragActive = false;
-    canScrollDown = false;
-    edgeZoneDir = 0;
-    dragMoveDir = 0;
+    leftBottomSinceDock = false;
     document.getElementById('dock')?.classList.remove('dock-over');
     if (autoScrollRaf) {
         cancelAnimationFrame(autoScrollRaf);
@@ -217,22 +197,17 @@ const hasExternalFiles = dt => {
 window.addEventListener('dragover', e => {
     e.preventDefault();
     if (viewOnly) return;
-    // Jika menyeret file dari luar browser (Explorer), pastikan status drag internal lama dibersihkan
     if (hasExternalFiles(e.dataTransfer) && (dragId || dragTierId)) {
         dragId = null;
         dragTierId = null;
     }
-    const dy = e.clientY - prevDragY;
-    if (Math.abs(dy) >= 2) dragMoveDir = dy < 0 ? -1 : 1;
-    prevDragY = e.clientY;
     dragClientY = e.clientY;
     lastDragOverTs = Date.now();
     if (!dragActive) {
         dragActive = true;
         const dockEl = document.getElementById('dock');
         const dockTop = (dockEl && !dockEl.classList.contains('closed')) ? dockEl.getBoundingClientRect().top : innerHeight;
-        // Kalau mulai drag dari dalam/dekat inventaris, kunci scroll bawah sampai kursor naik ke area tier
-        canScrollDown = e.clientY < dockTop - 80;
+        leftBottomSinceDock = e.clientY < dockTop - 90;
         startAutoScroll();
     }
 });
@@ -535,6 +510,7 @@ async function saveNow() {
             showLabels: state.showLabels,
             slideSpeed: state.slideSpeed,
             props: liveProps(),
+            savedValues: cleanSavedValues(state.savedValues),
             crops: liveCrops(),
             slides: liveSlides(),
             desc: state.desc,
@@ -581,7 +557,8 @@ async function exportJSON() {
             app: 'tierlist', version: 1, name: curName(), exportedAt: new Date().toISOString(),
             tiers: state.tiers, pool: state.pool, fit: state.fit, ratio: state.ratio,
             size: state.size, showLabels: state.showLabels, slideSpeed: state.slideSpeed,
-            props: liveProps(), crops: liveCrops(), slides: liveSlides(), desc: state.desc, images,
+            props: liveProps(), savedValues: cleanSavedValues(state.savedValues),
+            crops: liveCrops(), slides: liveSlides(), desc: state.desc, images,
         };
         const file = new Blob([JSON.stringify(payload)], { type: 'application/json' });
         const a = document.createElement('a');
@@ -664,6 +641,7 @@ async function parseAndCleanTierlistJSON(data) {
     Object.entries(cleanCrops(data.crops)).forEach(([oldId, c]) => {
         if (blobs.has(oldId)) crops[oldId] = c;
     });
+    const savedValues = cleanSavedValues(data.savedValues);
 
     return {
         name: String(data.name || 'Tierlist').slice(0, 60),
@@ -676,6 +654,7 @@ async function parseAndCleanTierlistJSON(data) {
         showLabels,
         slideSpeed,
         props,
+        savedValues,
         crops,
         slides,
         blobs
@@ -717,7 +696,8 @@ async function importJSON(file) {
             t.objectStore('lists').put({
                 id, name, tiers: parsed.tiers, pool: newPool, fit: parsed.fit,
                 ratio: parsed.ratio, size: parsed.size, showLabels: parsed.showLabels,
-                slideSpeed: parsed.slideSpeed, props: newProps, crops: newCrops, slides: newSlides,
+                slideSpeed: parsed.slideSpeed, props: newProps, savedValues: parsed.savedValues,
+                crops: newCrops, slides: newSlides,
                 desc: parsed.desc, exportedAt: ts, updatedAt: ts
             });
             t.oncomplete = resolve;
@@ -833,6 +813,106 @@ document.getElementById('importFile').addEventListener('change', e => {
     e.target.value = '';
     if (f) importJSON(f);
 });
+document.getElementById('btnHelp').addEventListener('click', openHelpModal);
+
+// Tombol + Pilih gambar di bar inventaris & dukungan Ctrl+V (Paste gambar)
+const poolFileInp = document.getElementById('poolFileInput');
+document.getElementById('btnAddPoolFiles').addEventListener('click', () => {
+    if (viewOnly) return;
+    poolFileInp.click();
+});
+poolFileInp.addEventListener('change', async e => {
+    const files = [...(e.target.files || [])];
+    e.target.value = '';
+    if (!files.length || viewOnly) return;
+    if (dock.classList.contains('closed')) setDock(true);
+    pushUndo();
+    await addFiles(files, 'pool', null);
+    afterChange();
+});
+document.addEventListener('paste', async e => {
+    if (viewOnly || document.querySelector('.mback')) return;
+    const ae = document.activeElement;
+    if (ae && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) return;
+    const files = [...(e.clipboardData && e.clipboardData.files ? e.clipboardData.files : [])]
+        .filter(f => f.type.startsWith('image/'));
+    if (!files.length) return;
+    e.preventDefault();
+    if (dock.classList.contains('closed')) setDock(true);
+    pushUndo();
+    await addFiles(files, 'pool', null);
+    afterChange();
+});
+
+// ---------- Pop-up Panduan & Bantuan (?) ----------
+function openHelpModal() {
+    hideTip();
+    const back = mk('div', 'mback');
+    const box = mk('div', 'modal help-modal');
+    box.appendChild(mk('h3', '', 'Panduan & Bantuan Personal Tierlist'));
+    box.appendChild(mk('p', '', 'Ringkasan fitur, pintasan keyboard, dan solusi jika menemukan kendala.'));
+
+    const inner = mk('div', 'm-inner');
+    inner.innerHTML = `
+      <div class="help-sec">
+        <h4>1. Memasukkan &amp; Mengatur Gambar</h4>
+        <ul class="help-list">
+          <li><strong>Drag &amp; Drop:</strong> Seret satu atau banyak gambar sekaligus dari komputer langsung ke baris tier atau ke panel Inventaris di bawah.</li>
+          <li><strong>Alternatif Upload:</strong> Kamu juga bisa klik tombol <code>+ Pilih gambar</code> di bar Inventaris bawah, atau tekan <code>Ctrl + V</code> untuk paste gambar dari clipboard.</li>
+          <li><strong>Atur Posisi / Crop:</strong> Klik gambar lalu pilih <code>✥ Atur Posisi / Crop</code> untuk menggeser fokus gambar dan zoom tanpa memotong file aslinya.</li>
+          <li><strong>Slideshow (Banyak Gambar di 1 Kotak):</strong> Tahan <code>Shift</code> saat men-drag gambar ke atas gambar lain untuk menggabungkannya jadi 1 item slideshow, atau lewat tombol <code>+ Tambah Foto Slideshow</code> di pop-up gambar.</li>
+        </ul>
+      </div>
+      <div class="help-sec">
+        <h4>2. Properti, Autocomplete, &amp; Urutan</h4>
+        <ul class="help-list">
+          <li><strong>Autocomplete Cepat:</strong> Saat mengetik <em>Judul</em> properti (misal: <code>G</code> untuk <code>Game</code>), tekan <code>Tab</code> atau <code>Enter</code> untuk langsung melengkapi teks.</li>
+          <li><strong>Simpan Isi untuk Autocomplete (Opsional):</strong> Secara bawaan, <em>Isi</em> properti tidak disimpan ke kamus autocomplete. Jika ada isi yang sering dipakai berulang kali (misal nama game/anime), klik tombol <code>📌 Simpan isi</code> di baris tersebut agar ke depannya punya autocomplete saat diketik.</li>
+          <li><strong>Urutan Properti &amp; Label Gambar:</strong> Gunakan tombol <code>↑</code> dan <code>↓</code> di tiap baris properti untuk mengatur urutan. Properti paling atas (#1) akan dipakai sebagai teks label di bawah gambar jika fitur label diaktifkan di menu <em>Tampilan gambar</em>.</li>
+        </ul>
+      </div>
+      <div class="help-sec">
+        <h4>3. Pintasan Keyboard</h4>
+        <ul class="help-list">
+          <li><code>Ctrl + K</code> : Cari teks properti / catatan gambar</li>
+          <li><code>Ctrl + Z</code> / <code>Ctrl + Y</code> : Undo / Redo (hingga 50 langkah)</li>
+          <li><code>←</code> / <code>→</code> : Pindah gambar sebelumnya / berikutnya saat pop-up detail terbuka</li>
+        </ul>
+      </div>
+      <div class="help-sec">
+        <h4>4. Kendala Drag &amp; Drop Browser (Troubleshooting)</h4>
+        <div class="help-warn-box">
+          <strong>Gambar di-drag (muncul tulisan "Copy") tapi tidak masuk saat dilepas?</strong><br>
+          Setelah memasukkan banyak gambar dalam sesi yang panjang, sistem drag-and-drop browser Chrome/Chromium terkadang bisa mengalami <em>hang</em> dari sisi sistem operasi.<br>
+          <strong>Solusi:</strong> Gunakan tombol <code>+ Pilih gambar</code> di bar Inventaris bawah, atau <strong>close dulu browsernya trus buka lagi</strong>.
+        </div>
+      </div>
+    `;
+
+    const btns = mk('div', 'mbtns');
+    const okB = mk('button', 'primary', 'Mengerti');
+    okB.type = 'button';
+    btns.appendChild(okB);
+
+    box.append(inner, btns);
+    back.appendChild(box);
+    document.body.appendChild(back);
+
+    let closed = false;
+    function close() {
+        if (closed) return;
+        closed = true;
+        document.removeEventListener('keydown', onKey, true);
+        closeModalAnim(back);
+    }
+    function onKey(e) {
+        if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); close(); }
+    }
+    document.addEventListener('keydown', onKey, true);
+    back.addEventListener('mousedown', e => { if (e.target === back) close(); });
+    okB.addEventListener('click', close);
+    okB.focus();
+}
 
 // ---------- Undo / Redo (Mencakup Slideshow & Crop) ----------
 const MAX_UNDO = 50;
@@ -937,29 +1017,41 @@ async function isAnimated(file) {
     return false;
 }
 
+// Gunakan HTMLImageElement + ObjectURL (dan langsung revoke) untuk mencegah bug leak handle createImageBitmap(File) di Chrome
+function loadImageElement(file) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const im = new Image();
+        im.onload = () => { URL.revokeObjectURL(url); resolve(im); };
+        im.onerror = err => { URL.revokeObjectURL(url); reject(err); };
+        im.src = url;
+    });
+}
+
 async function shrinkImageCore(file) {
     if (file.type === 'image/svg+xml' || await isAnimated(file)) return file;
-    const bmp = await createImageBitmap(file);
-    const longest = Math.max(bmp.width, bmp.height);
-    if (longest <= MAX_SIDE && file.size <= KEEP_BYTES) { bmp.close(); return file; }
+    const im = await loadImageElement(file);
+    const bw = im.naturalWidth || im.width, bh = im.naturalHeight || im.height;
+    const longest = Math.max(bw, bh);
+    if (!longest || (longest <= MAX_SIDE && file.size <= KEEP_BYTES)) return file;
     const scale = Math.min(1, MAX_SIDE / longest);
-    const w = Math.max(1, Math.round(bmp.width * scale));
-    const h = Math.max(1, Math.round(bmp.height * scale));
+    const w = Math.max(1, Math.round(bw * scale));
+    const h = Math.max(1, Math.round(bh * scale));
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;
-    canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
-    bmp.close();
+    canvas.getContext('2d').drawImage(im, 0, 0, w, h);
     const out = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.85));
+    canvas.width = 0;
+    canvas.height = 0;
     return out && out.size < file.size ? out : file;
 }
 
 async function shrinkImage(file) {
     try {
-        // Batas waktu 5 detik agar jika decoder canvas browser macet setelah ratusan gambar, otomatis pakai file asli tanpa hang
         return await Promise.race([
             shrinkImageCore(file),
-            new Promise(resolve => setTimeout(() => resolve(file), 5000))
+            new Promise(resolve => setTimeout(() => resolve(file), 4000))
         ]);
     } catch (err) {
         console.error('Gagal mengecilkan, pakai file asli:', err);
@@ -974,15 +1066,20 @@ async function storeFilesAsImages(files) {
         statusEl.textContent = `Memproses gambar ${i + 1}/${list.length}…`;
         const blob = await shrinkImage(list[i]);
         const id = crypto.randomUUID();
-        try {
-            if (db) await run('images', 'readwrite', s => s.put({ id, blob, listId: currentId }));
-        } catch (err) {
-            console.error(err);
-            statusEl.textContent = 'Gagal menyimpan gambar (penyimpanan penuh?)';
-            continue;
-        }
+        // Masukkan ke state memori lebih dulu agar gambar pasti tampil di layar walau IndexedDB sedang sibuk
         state.images[id] = { url: URL.createObjectURL(blob), blob };
         newIds.push(id);
+        if (db && currentId) {
+            try {
+                await Promise.race([
+                    run('images', 'readwrite', s => s.put({ id, blob, listId: currentId })),
+                    new Promise((_, rej) => setTimeout(() => rej(new Error('DB write timeout')), 4000))
+                ]);
+            } catch (err) {
+                console.error('Gagal menyimpan gambar ke DB:', err);
+                statusEl.textContent = 'Peringatan: penyimpanan browser lambat/penuh';
+            }
+        }
     }
     return newIds;
 }
@@ -1185,6 +1282,39 @@ function cleanProps(list) {
         .map(p => ({ t: String((p && p.t) || '').slice(0, 60), v: String((p && p.v) || '').slice(0, 2000) }))
         .filter(p => p.t.trim() || p.v.trim());
 }
+function cleanSavedValues(list) {
+    const seen = new Set();
+    const out = [];
+    for (const item of (Array.isArray(list) ? list : [])) {
+        const s = String(item || '').trim().slice(0, 300);
+        if (!s) continue;
+        const key = s.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(s);
+    }
+    return out.slice(0, 200);
+}
+function isValueSaved(val) {
+    const s = String(val || '').trim().toLowerCase();
+    if (!s) return false;
+    return (state.savedValues || []).some(x => x.toLowerCase() === s);
+}
+function toggleSavedValue(val) {
+    const s = String(val || '').trim().slice(0, 300);
+    if (!s) return false;
+    const key = s.toLowerCase();
+    const idx = (state.savedValues || []).findIndex(x => x.toLowerCase() === key);
+    if (idx !== -1) {
+        state.savedValues.splice(idx, 1);
+        saveSoon();
+        return false;
+    } else {
+        state.savedValues.push(s);
+        saveSoon();
+        return true;
+    }
+}
 
 const tip = mk('div', 'tip');
 document.body.appendChild(tip);
@@ -1221,17 +1351,32 @@ function showTipFor(list, e) {
     moveTip(e);
 }
 
-const titleList = mk('datalist');
-titleList.id = 'ptitles';
-document.body.appendChild(titleList);
+function getUsedTitles() {
+    const seen = new Set();
+    const out = [];
+    for (const p of Object.values(state.props).flat()) {
+        const s = (p && p.t ? p.t.trim() : '');
+        if (!s) continue;
+        const k = s.toLowerCase();
+        if (!seen.has(k)) { seen.add(k); out.push(s); }
+    }
+    return out;
+}
 
-function refreshTitleSuggestions() {
-    const used = new Set(Object.values(state.props).flat().map(p => p.t).filter(Boolean));
-    titleList.replaceChildren(...[...used].map(t => { const o = mk('option'); o.value = t; return o; }));
+function findMatches(query, pool) {
+    const q = String(query || '').trim().toLowerCase();
+    if (!q) return [];
+    const prefix = [], substr = [];
+    for (const item of pool) {
+        const low = item.toLowerCase();
+        if (low === q) continue; // sudah persis sama, tidak perlu disarankan lagi
+        if (low.startsWith(q)) prefix.push(item);
+        else if (low.includes(q)) substr.push(item);
+    }
+    return [...prefix, ...substr].slice(0, 5);
 }
 
 function buildLivePropsEditor(initialList, onChange) {
-    refreshTitleSuggestions();
     const wrap = mk('div', 'live-props-wrap');
     const listEl = mk('div', 'live-props-list');
 
@@ -1240,20 +1385,105 @@ function buildLivePropsEditor(initialList, onChange) {
             t: r.querySelector('input').value,
             v: r.querySelector('textarea').value,
         })));
+        refreshRowMoveButtons();
         onChange(cleaned);
+    }
+
+    function refreshRowMoveButtons() {
+        const rows = [...listEl.children];
+        rows.forEach((r, idx) => {
+            const upB = r.querySelector('.move-up');
+            const dnB = r.querySelector('.move-down');
+            if (upB) upB.disabled = idx === 0;
+            if (dnB) dnB.disabled = idx === rows.length - 1;
+        });
+    }
+
+    function wireAutocomplete(field, getPool, onAccepted) {
+        const acBar = mk('div', 'ac-bar');
+        acBar.hidden = true;
+        let currentMatches = [];
+
+        function updateAc() {
+            if (document.activeElement !== field) {
+                acBar.hidden = true;
+                currentMatches = [];
+                return;
+            }
+            currentMatches = findMatches(field.value, getPool());
+            if (!currentMatches.length) {
+                acBar.hidden = true;
+                return;
+            }
+            acBar.replaceChildren();
+            acBar.appendChild(mk('span', 'ac-hint', 'Auto:'));
+            currentMatches.forEach((m, idx) => {
+                const chip = mk('button', 'ac-chip' + (idx === 0 ? ' first' : ''));
+                chip.type = 'button';
+                chip.appendChild(mk('span', '', m));
+                if (idx === 0) chip.appendChild(mk('span', 'ac-kbd', 'Tab / Enter'));
+                chip.addEventListener('mousedown', e => {
+                    e.preventDefault(); // jangan hilangkan fokus input
+                    applyMatch(m);
+                });
+                acBar.appendChild(chip);
+            });
+            acBar.hidden = false;
+        }
+
+        function applyMatch(val) {
+            field.value = val;
+            acBar.hidden = true;
+            currentMatches = [];
+            onAccepted();
+        }
+
+        field.addEventListener('input', updateAc);
+        field.addEventListener('focus', updateAc);
+        field.addEventListener('blur', () => {
+            setTimeout(() => { acBar.hidden = true; currentMatches = []; }, 120);
+        });
+        field.addEventListener('keydown', e => {
+            if (!acBar.hidden && currentMatches.length > 0) {
+                if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    applyMatch(currentMatches[0]);
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    acBar.hidden = true;
+                    currentMatches = [];
+                }
+            }
+        });
+
+        return acBar;
     }
 
     function addRow(p = { t: '', v: '' }) {
         const r = mk('div', 'prow');
         const top = mk('div', 'prow-top');
+        const tWrap = mk('div', 'pfield-wrap');
         const t = mk('input');
-        const x = mk('button', 'x', '×');
+        const vWrap = mk('div', 'pfield-wrap');
         const v = mk('textarea');
+
+        const pinB = mk('button', 'pbtn pin-btn');
+        pinB.type = 'button';
+        const upB = mk('button', 'pbtn move-up', '↑');
+        upB.type = 'button';
+        upB.title = 'Geser properti ini ke atas';
+        const dnB = mk('button', 'pbtn move-down', '↓');
+        dnB.type = 'button';
+        dnB.title = 'Geser properti ini ke bawah';
+        const x = mk('button', 'x', '×');
+        x.type = 'button';
+        x.title = 'Hapus properti ini';
 
         t.type = 'text';
         t.value = p.t;
-        t.placeholder = 'Judul (klik untuk ketik)…';
-        t.setAttribute('list', 'ptitles');
+        t.placeholder = 'Judul (ketik & tekan Tab/Enter untuk auto)…';
         t.maxLength = 60;
 
         v.value = p.v;
@@ -1261,20 +1491,66 @@ function buildLivePropsEditor(initialList, onChange) {
         v.rows = 2;
         v.maxLength = 2000;
 
-        x.type = 'button';
-        x.title = 'Hapus properti ini';
+        function syncPinUI() {
+            const valStr = v.value.trim();
+            const saved = isValueSaved(valStr);
+            pinB.classList.toggle('saved', saved);
+            pinB.textContent = saved ? '📌 Tersimpan' : '📌 Simpan isi';
+            pinB.title = saved
+                ? 'Isi ini tersimpan di kamus autocomplete. Klik untuk menghapus dari autocomplete.'
+                : 'Simpan teks isi ini ke kamus autocomplete (opsional, untuk nama game/anime yang sering diulang)';
+            pinB.disabled = !valStr;
+        }
+
+        pinB.addEventListener('click', () => {
+            if (!v.value.trim()) return;
+            toggleSavedValue(v.value);
+            // Sinkronkan semua tombol pin di layar jika ada nilai yang sama
+            listEl.querySelectorAll('.prow').forEach(rowEl => rowEl._syncPin && rowEl._syncPin());
+        });
+        r._syncPin = syncPinUI;
+
+        upB.addEventListener('click', () => {
+            const prevRow = r.previousElementSibling;
+            if (!prevRow) return;
+            listEl.insertBefore(r, prevRow);
+            emitChange();
+        });
+        dnB.addEventListener('click', () => {
+            const nextRow = r.nextElementSibling;
+            if (!nextRow) return;
+            listEl.insertBefore(nextRow, r);
+            emitChange();
+        });
+
         x.addEventListener('click', () => {
             r.remove();
             if (!listEl.children.length) addRow({ t: '', v: '' });
             emitChange();
         });
 
-        t.addEventListener('input', emitChange);
-        v.addEventListener('input', emitChange);
+        const tAcBar = wireAutocomplete(t, getUsedTitles, () => {
+            emitChange();
+            v.focus();
+        });
+        const vAcBar = wireAutocomplete(v, () => state.savedValues || [], () => {
+            syncPinUI();
+            emitChange();
+        });
 
-        top.append(t, x);
-        r.append(top, v);
+        t.addEventListener('input', emitChange);
+        v.addEventListener('input', () => {
+            syncPinUI();
+            emitChange();
+        });
+
+        tWrap.append(t, tAcBar);
+        vWrap.append(v, vAcBar);
+        top.append(tWrap, pinB, upB, dnB, x);
+        r.append(top, vWrap);
         listEl.appendChild(r);
+        syncPinUI();
+        refreshRowMoveButtons();
         return t;
     }
 
@@ -1300,7 +1576,6 @@ function openDetail(id) {
     let i = Math.max(0, order.indexOf(id));
     let curFrameIdx = 0;
     let cropMode = false;
-    let showMergePicker = false;
     let pushedUndoForCur = false;
 
     const back = mk('div', 'mback');
@@ -1479,15 +1754,7 @@ function openDetail(id) {
             addFileBtn.title = 'Tambahkan foto dari komputer ke dalam item ini agar jadi slideshow';
             addFileBtn.addEventListener('click', () => slideFileInput.click());
 
-            const mergeBtn = mk('button', 'dm-btn' + (showMergePicker ? ' active' : ''), '+ Gabung dari Tier/Inventaris');
-            mergeBtn.type = 'button';
-            mergeBtn.title = 'Ambil gambar lain yang sudah ada di tierlist/inventaris untuk digabung ke item ini';
-            mergeBtn.addEventListener('click', () => {
-                showMergePicker = !showMergePicker;
-                renderLeftMedia(curPrimaryId);
-            });
-
-            btns.append(cropBtn, addFileBtn, mergeBtn);
+            btns.append(cropBtn, addFileBtn);
             topRow.appendChild(btns);
         }
         mediaBar.appendChild(topRow);
@@ -1555,35 +1822,6 @@ function openDetail(id) {
                 strip.appendChild(th);
             });
             mediaBar.appendChild(strip);
-        }
-
-        // Panel pemilih gambar dari tier/inventaris untuk digabung
-        if (showMergePicker && !viewOnly) {
-            const candidates = getOrder().filter(oid => oid !== curPrimaryId);
-            if (!candidates.length) {
-                mediaBar.appendChild(mk('div', 'dempty', 'Belum ada gambar lain di tierlist atau inventaris untuk digabung.'));
-            } else {
-                const picker = mk('div', 'merge-picker');
-                candidates.forEach(oid => {
-                    const b = mk('button', 'merge-pick-item');
-                    b.type = 'button';
-                    b.title = 'Klik untuk gabungkan gambar ini ke slideshow';
-                    const pImg = mk('img');
-                    pImg.src = state.images[oid].url;
-                    b.appendChild(pImg);
-                    b.addEventListener('click', () => {
-                        ensureUndoOnce();
-                        mergeItemIntoSlideshow(curPrimaryId, oid);
-                        order = getOrder();
-                        i = Math.max(0, order.indexOf(curPrimaryId));
-                        curFrameIdx = getFrames(curPrimaryId).length - 1;
-                        afterChange();
-                        show(false);
-                    });
-                    picker.appendChild(b);
-                });
-                mediaBar.appendChild(picker);
-            }
         }
     }
 
@@ -2559,6 +2797,7 @@ function applyViewOnlyUI() {
     document.getElementById('btnPng').hidden = viewOnly;
     document.getElementById('btnExport').hidden = viewOnly;
     document.getElementById('btnImport').hidden = viewOnly;
+    document.getElementById('btnAddPoolFiles').hidden = viewOnly;
     const descEl = document.getElementById('listDesc');
     descEl.readOnly = viewOnly;
     descEl.hidden = viewOnly && !state.desc.trim();
@@ -2609,7 +2848,7 @@ async function createList(name) {
     await run('lists', 'readwrite', s => s.put({
         id, name, tiers: defaultTiers(), pool: [], fit: 'cover',
         ratio: '1:1', size: 88, showLabels: false, slideSpeed: 3700,
-        props: {}, crops: {}, slides: {}, desc: '', exportedAt: 0, updatedAt: 0
+        props: {}, savedValues: [], crops: {}, slides: {}, desc: '', exportedAt: 0, updatedAt: 0
     }));
     lists.push({ id, name });
     return id;
@@ -2646,6 +2885,7 @@ async function loadList(id) {
     }));
     state.pool = rec.pool || [];
     state.props = rec.props || {};
+    state.savedValues = cleanSavedValues(rec.savedValues);
     state.crops = cleanCrops(rec.crops);
     state.slides = rec.slides || {};
     state.desc = rec.desc || '';
@@ -2754,6 +2994,7 @@ async function loadViewOnlyFromData(rawData) {
     state.tiers = parsed.tiers;
     state.pool = parsed.pool;
     state.props = parsed.props;
+    state.savedValues = parsed.savedValues || [];
     state.crops = parsed.crops;
     state.slides = parsed.slides;
     state.desc = parsed.desc;

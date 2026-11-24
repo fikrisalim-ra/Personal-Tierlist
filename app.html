@@ -7,8 +7,8 @@
   <title>Personal Tierlist</title>
   <meta name="theme-color" content="#070b14">
   <link rel="icon" type="image/png" href="Personal%20Tierlist%20favicon-02.png">
-  <link rel="stylesheet" href="theme.css?v=10">
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="theme.css?v=11">
+  <link rel="stylesheet" href="style.css?v=11">
 </head>
 
 <body>
@@ -57,6 +57,7 @@
       <button id="btnPng" type="button" title="Simpan tierlist sebagai gambar PNG untuk dibagikan">Export PNG</button>
       <button id="btnExport" type="button" title="Simpan semua (gambar + susunan) jadi satu file JSON">Export</button>
       <button id="btnImport" type="button" title="Muat file JSON sebagai tierlist baru">Import</button>
+      <button id="btnHelp" type="button" class="help-btn" title="Panduan pemakaian &amp; solusi kendala">?</button>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
     </div>
   </header>
@@ -72,24 +73,27 @@
 
   <div id="dock">
     <div id="dockGrip" title="Tarik untuk mengubah tinggi inventaris"><span></span></div>
-    <button class="dock-bar" id="dockToggle" type="button">
-      <span class="dt">Inventaris gambar</span>
-      <span id="dockCount"></span>
-      <span class="dock-tip">Klik gambar untuk detail / crop / slideshow · Tahan Shift saat drop ke gambar lain untuk
-        gabung slideshow</span>
-      <span class="chev" id="dockChev">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </span>
-    </button>
+    <div class="dock-head">
+      <button class="dock-bar" id="dockToggle" type="button">
+        <span class="dt">Inventaris gambar</span>
+        <span id="dockCount"></span>
+        <span class="dock-tip">Klik gambar untuk detail / crop / slideshow · Tahan Shift saat drop ke gambar lain untuk gabung slideshow</span>
+        <span class="chev" id="dockChev">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </span>
+      </button>
+      <button id="btnAddPoolFiles" type="button" class="dock-add-btn" title="Pilih gambar dari komputer (alternatif selain drag &amp; drop)">+ Pilih gambar</button>
+      <input type="file" id="poolFileInput" accept="image/*" multiple hidden>
+    </div>
     <div class="dock-body" id="dockBody">
       <div class="zone" id="pool" data-zone="pool"></div>
     </div>
   </div>
 
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 
 </html>
